@@ -19,9 +19,9 @@
  *
 */
 
-var argscheck = require('cordova/argscheck'),
-    utils = require('cordova/utils'),
-    exec = require('cordova/exec');
+var argscheck = cordova.require('cordova/argscheck'),
+    utils = cordova.require('cordova/utils'),
+    exec = cordova.require('cordova/exec');
 
 var mediaObjects = {};
 
@@ -48,6 +48,11 @@ var Media = function(src, successCallback, errorCallback, statusCallback) {
     this._duration = -1;
     this._position = -1;
     exec(null, this.errorCallback, "Media", "create", [this.id, this.src]);
+    
+    this._mediaState = 0;
+    this._paused = true;
+    this._ended = false;
+    this._started = false;
 };
 
 // Media messages
@@ -73,6 +78,9 @@ Media.get = function(id) {
  * Start or resume playing audio file.
  */
 Media.prototype.play = function(options) {
+    this._paused = false;
+    this._started = true;
+    this._ended = false;
     exec(null, null, "Media", "startPlayingAudio", [this.id, this.src, options]);
 };
 
@@ -83,6 +91,9 @@ Media.prototype.stop = function() {
     var me = this;
     exec(function() {
         me._position = 0;
+        me._ended = true;
+        this._started = false;
+        this._paused = true;
     }, this.errorCallback, "Media", "stopPlayingAudio", [this.id]);
 };
 
@@ -100,6 +111,7 @@ Media.prototype.seekTo = function(milliseconds) {
  * Pause playing audio file.
  */
 Media.prototype.pause = function() {
+    this._paused = true;
     exec(null, this.errorCallback, "Media", "pausePlayingAudio", [this.id]);
 };
 
@@ -110,7 +122,28 @@ Media.prototype.pause = function() {
  * @return      duration or -1 if not known.
  */
 Media.prototype.getDuration = function() {
-    return this._duration;
+    var me = this;
+    return me._duration;
+};
+Media.prototype.getPosition = function() {
+    var me = this;
+    return me._position;
+};
+Media.prototype.getMediaState = function() {
+    var me = this;
+    return me._mediaState;
+};
+Media.prototype.getPaused = function() {
+    var me = this;
+    return me._paused;
+};
+Media.prototype.getStarted = function() {
+    var me = this;
+    return me._started;
+};
+Media.prototype.getEnded = function() {
+    var me = this;
+    return me._position === 0;
 };
 
 /**
@@ -122,6 +155,13 @@ Media.prototype.getCurrentPosition = function(success, fail) {
         me._position = p;
         success(p);
     }, fail, "Media", "getCurrentPositionAudio", [this.id]);
+};
+/**
+ * Update position.
+ */
+Media.prototype.updatePosition = function() {
+    var me = this;
+    exec((p) => me._position = p, this.errorCallback, "Media", "getCurrentPositionAudio", [this.id]);
 };
 
 /**
@@ -199,9 +239,12 @@ Media.onStatus = function(id, msgType, value) {
     var media = mediaObjects[id];
 
     if (media) {
+        console.log("msgType received", msgType, Media.MEDIA_MSG[msgType], value)
         switch(msgType) {
             case Media.MEDIA_STATE :
+                media._mediaState = value;
                 if (media.statusCallback) {
+                    console.log("statusCallback chamado", this._duration, this._position)
                     media.statusCallback(value);
                 }
                 if (value == Media.MEDIA_STOPPED) {

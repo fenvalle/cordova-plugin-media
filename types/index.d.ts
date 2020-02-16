@@ -45,6 +45,12 @@ interface Media {
         mediaError?: (error: MediaError) => void): void;
     /** Returns the duration of an audio file in seconds. If the duration is unknown, it returns a value of -1. */
     getDuration(): number;
+	getPosition(): number;
+	getMediaState(): number;
+	getPaused(): number;
+	getStarted(): number;
+	getEnded(): number;
+	updatePosition(): void;
     /** 
      * Starts or resumes playing an audio file.
      * @param iosPlayOptions: iOS options quirks
@@ -81,6 +87,9 @@ interface Media {
     position: number;
     /** The duration of the media, in seconds. */
     duration: number;
+	mediaState: number;
+	isPaused: boolean;
+	ended: boolean;
 }
 /**
  *  iOS optional parameters for media.play
