@@ -50,7 +50,8 @@ interface Media {
 	getPaused(): number;
 	getStarted(): number;
 	getEnded(): number;
-	updatePosition(): void;
+    updatePosition(): void;
+    updatePlayingPosition(): void;
     /** 
      * Starts or resumes playing an audio file.
      * @param iosPlayOptions: iOS options quirks

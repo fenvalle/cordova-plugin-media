@@ -227,6 +227,24 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
 };
 
 /**
+ * When playing updatePlayingPosition of audio.
+ */
+Media.prototype.updatePlayingPosition = function() {
+    var me = this;
+    if (me._mediaState === me.MEDIA_RUNNING) {
+        if (!me._setInterval) {
+           me._setInterval = setInterval(() => this.updatePosition(), 1000)
+        }    
+        console.log("Audio current playing and setInterval set", me._setInterval)
+    }
+    if (!!me._setInterval) {
+        console.log("Clear Interval")
+        clearInterval(me._setInterval);   
+        me._setInterval = false;
+    } 
+};
+
+/**
  * Audio has status update.
  * PRIVATE
  *
@@ -239,15 +257,16 @@ Media.onStatus = function(id, msgType, value) {
     var media = mediaObjects[id];
 
     if (media) {
-        console.log("msgType received", msgType, Media.MEDIA_MSG[msgType], value)
         switch(msgType) {
             case Media.MEDIA_STATE :
+                console.log("msgType received", msgType, Media.MEDIA_MSG[msgType], value)
                 media._mediaState = value;
+                this.updatePlayingPosition();
                 if (media.statusCallback) {
-                    console.log("statusCallback chamado", this._duration, this._position)
                     media.statusCallback(value);
                 }
                 if (value == Media.MEDIA_STOPPED) {
+                    console.log("Media stopped", media._position, media._duration)
                     if (media.successCallback) {
                         media.successCallback();
                     }
@@ -255,6 +274,7 @@ Media.onStatus = function(id, msgType, value) {
                 break;
             case Media.MEDIA_DURATION :
                 media._duration = value;
+                console.log("Updated duration", value, media._duration)
                 break;
             case Media.MEDIA_ERROR :
                 if (media.errorCallback) {
@@ -263,6 +283,7 @@ Media.onStatus = function(id, msgType, value) {
                 break;
             case Media.MEDIA_POSITION :
                 media._position = Number(value);
+                console.log("Received a new position", media._position, media._duration, " remaining ", media._duration - media._position)
                 break;
             default :
                 if (console.error) {
