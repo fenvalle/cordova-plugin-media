@@ -78,9 +78,10 @@ Media.get = function(id) {
  * Start or resume playing audio file.
  */
 Media.prototype.play = function(options) {
-    this._paused = false;
-    this._started = true;
-    this._ended = false;
+    var me = this;
+    me._paused = false;
+    me._started = true;
+    me._ended = false;
     exec(null, null, "Media", "startPlayingAudio", [this.id, this.src, options]);
 };
 
@@ -92,8 +93,8 @@ Media.prototype.stop = function() {
     exec(function() {
         me._position = 0;
         me._ended = true;
-        this._started = false;
-        this._paused = true;
+        me._started = false;
+        me._paused = true;
     }, this.errorCallback, "Media", "stopPlayingAudio", [this.id]);
 };
 
@@ -261,7 +262,7 @@ Media.onStatus = function(id, msgType, value) {
             case Media.MEDIA_STATE :
                 console.log("msgType received", msgType, Media.MEDIA_MSG[msgType], value)
                 media._mediaState = value;
-                this.updatePlayingPosition();
+                media.updatePlayingPosition();
                 if (media.statusCallback) {
                     media.statusCallback(value);
                 }
