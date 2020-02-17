@@ -17,6 +17,7 @@ declare var Media: {
         MEDIA_STARTING: number;
         MEDIA_RUNNING: number;
         MEDIA_PAUSED: number;
+        MEDIA_ENDED: number;
         MEDIA_STOPPED: number
 };
 
@@ -47,9 +48,9 @@ interface Media {
     getDuration(): number;
 	getPosition(): number;
 	getMediaState(): number;
-	getPaused(): number;
-	getStarted(): number;
-	getEnded(): number;
+	getPaused(): boolean;
+	getStarted(): boolean;
+	getEnded(): boolean;
     updatePosition(): void;
     updatePlayingPosition(): void;
     /** 

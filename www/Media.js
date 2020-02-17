@@ -1,28 +1,3 @@
-/*
- *
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- *
-*/
-
-var argscheck = cordova.require('cordova/argscheck'),
-    utils = cordova.require('cordova/utils'),
-    exec = cordova.require('cordova/exec');
-
 var mediaObjects = {};
 
 /**
@@ -67,7 +42,8 @@ Media.MEDIA_STARTING = 1;
 Media.MEDIA_RUNNING = 2;
 Media.MEDIA_PAUSED = 3;
 Media.MEDIA_STOPPED = 4;
-Media.MEDIA_MSG = ["None", "Starting", "Running", "Paused", "Stopped"];
+Media.MEDIA_ENDED = 5;
+Media.MEDIA_MSG = ["None", "Starting", "Running", "Paused", "Stopped", "Ended"];
 
 // "static" function to return existing objs.
 Media.get = function(id) {
@@ -78,10 +54,9 @@ Media.get = function(id) {
  * Start or resume playing audio file.
  */
 Media.prototype.play = function(options) {
-    var me = this;
-    me._paused = false;
-    me._started = true;
-    me._ended = false;
+    this._paused = false;
+    this._started = true;
+    this._ended = false;
     exec(null, null, "Media", "startPlayingAudio", [this.id, this.src, options]);
 };
 
@@ -93,8 +68,8 @@ Media.prototype.stop = function() {
     exec(function() {
         me._position = 0;
         me._ended = true;
-        me._started = false;
-        me._paused = true;
+        this._started = false;
+        this._paused = true;
     }, this.errorCallback, "Media", "stopPlayingAudio", [this.id]);
 };
 
@@ -163,6 +138,7 @@ Media.prototype.getCurrentPosition = function(success, fail) {
 Media.prototype.updatePosition = function() {
     var me = this;
     exec((p) => me._position = p, this.errorCallback, "Media", "getCurrentPositionAudio", [this.id]);
+    console.log("update position, ", me._position)
 };
 
 /**
@@ -232,11 +208,12 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
  */
 Media.prototype.updatePlayingPosition = function() {
     var me = this;
-    if (me._mediaState === me.MEDIA_RUNNING) {
+    console.log("Audio current playing and setInterval set", me._setInterval)
+
+    if (me._mediaState === Media.MEDIA_RUNNING || me._mediaState === Media.MEDIA_STARTING) {
         if (!me._setInterval) {
            me._setInterval = setInterval(() => this.updatePosition(), 1000)
         }    
-        console.log("Audio current playing and setInterval set", me._setInterval)
     }
     if (!!me._setInterval) {
         console.log("Clear Interval")
@@ -260,9 +237,8 @@ Media.onStatus = function(id, msgType, value) {
     if (media) {
         switch(msgType) {
             case Media.MEDIA_STATE :
-                console.log("msgType received", msgType, Media.MEDIA_MSG[msgType], value)
                 media._mediaState = value;
-                media.updatePlayingPosition();
+                // media.updatePlayingPosition();
                 if (media.statusCallback) {
                     media.statusCallback(value);
                 }
@@ -284,7 +260,12 @@ Media.onStatus = function(id, msgType, value) {
                 break;
             case Media.MEDIA_POSITION :
                 media._position = Number(value);
-                console.log("Received a new position", media._position, media._duration, " remaining ", media._duration - media._position)
+                if (media._position > 0 && media._duration - media._position == 0){
+                    media._ended = true;
+                    media._paused = true;
+                    media._started = false;
+                    media.statusCallback(Media.MEDIA_ENDED)
+                } 
                 break;
             default :
                 if (console.error) {
