@@ -328,11 +328,9 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
  */
 Media.prototype.autoUpdatePosition = function() {
     var me = this;
-    me.updatePosition()
-    console.log("Audio position updated", me.getPosition());
-    
-    if (me._playing) {
-        console.log("Playing - keep recursive", me.getPosition());
+    if (me._mediaState == Media.MEDIA_RUNNING) {
+    	me.updatePosition()
+    	console.log("Audio position updated", me._position);
         setTimeout(()=> me.autoUpdatePosition(), 200);
         me.setFadeInOut();
     }
@@ -342,8 +340,8 @@ Media.prototype.autoUpdatePosition = function() {
  */
 Media.prototype.setFadeInOut = function() {
 	var me = this;
-	const doFadeOut = me._fadeOut && me._remaining <= me._fadeTime;
-	const doFadeIn = me._fadeIn && me._fadeTime > me._position;
+	const fadeOutZone = me._fadeOut && me._fadeTime >= me._remaining;
+	const fadeInZone = me._fadeIn && me._fadeTime > me._position;
 
 	// // FadeOut - equal power: from 100% to 0%
 	// Math.sqrt(0.5 + 0.5 * Math.cos(Math.PI * x));
@@ -353,16 +351,20 @@ Media.prototype.setFadeInOut = function() {
 	// Math.cos(x * 0.5 * Math.PI);
 
 	// FadeOut
-	me._fadingOut = doFadeOut;
-	if (doFadeOut) {
-		me.statusCallback(Media.MEDIA_FADING_OUT);
+	if (fadeOutZone) {
+		if (!me._fadingOut){
+			//ensures only one FadingOut event sent
+			me._fadingOut = true;
+			me.statusCallback(Media.MEDIA_FADING_OUT);
+		}
+		
 		const x = me._remaining / this._fadeTime;
 		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
 		console.log("Fading out. Remaining,ratio, and factor: ", me._remaining, x, fadeFactor);
 		me.setFadeVolume(parseFloat(fadeFactor));
 	}
 	//Fadein
-	if (doFadeIn) {
+	if (fadeInZone) {
 		const x = me._position / this._fadeTime;
 		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
 		console.log("Fading In. Position,ratio, and factor: ", me._position, x, fadeFactor);
@@ -399,12 +401,6 @@ Media.onStatus = function(id, msgType, value) {
 					media._paused,
 					media._ended
 				);
-				if (value == Media.MEDIA_STOPPED) {
-					media._position = 0;
-				}
-				if (value == Media.MEDIA_ENDED) {
-					media._position = 0;
-				}
 
                 if (media.statusCallback) {
                     media.statusCallback(value);
@@ -427,7 +423,11 @@ Media.onStatus = function(id, msgType, value) {
             case Media.MEDIA_POSITION:
                 media._position = Number(value);
                 media._remaining = media._duration - media._position;
-                media.positionCallback(media._remaining);
+				media.autoUpdatePosition();
+                
+				if (media.positionCallback) {
+                    media.positionCallback(media._remaining);
+                }
                 break;
             default:
                 if (console.error) {
@@ -435,7 +435,6 @@ Media.onStatus = function(id, msgType, value) {
                 }
                 break;
         }
-        media.autoUpdatePosition();
     } else if (console.error) {
         console.error("Received Media.onStatus callback for unknown media :: " + id);
     }
