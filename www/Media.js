@@ -250,7 +250,6 @@ Media.prototype.getCurrentPosition = function(success, fail) {
 Media.prototype.updatePosition = function() {
     var me = this;
     exec((p) => me._position = p, this.errorCallback, "Media", "getCurrentPositionAudio", [this.id]);
-    console.log("update position, ", me._position);
 };
 
 /**
@@ -330,8 +329,7 @@ Media.prototype.autoUpdatePosition = function() {
     var me = this;
     if (me._mediaState == Media.MEDIA_RUNNING) {
     	me.updatePosition()
-    	console.log("Audio position updated", me._position);
-        setTimeout(()=> me.autoUpdatePosition(), 200);
+        setTimeout(()=> me.autoUpdatePosition(), 100);
         me.setFadeInOut();
     }
 };
@@ -340,7 +338,7 @@ Media.prototype.autoUpdatePosition = function() {
  */
 Media.prototype.setFadeInOut = function() {
 	var me = this;
-	const fadeOutZone = me._fadeOut && me._fadeTime >= me._remaining;
+	const fadeOutZone = me._fadeOut && me._fadeTime >= me._remaining && me._position > me._fadeTime;
 	const fadeInZone = me._fadeIn && me._fadeTime > me._position;
 
 	// // FadeOut - equal power: from 100% to 0%
@@ -354,20 +352,19 @@ Media.prototype.setFadeInOut = function() {
 	if (fadeOutZone) {
 		if (!me._fadingOut){
 			//ensures only one FadingOut event sent
+            console.log("fading Out false, setting to true and statusCallback 6")
 			me._fadingOut = true;
 			me.statusCallback(Media.MEDIA_FADING_OUT);
 		}
 		
 		const x = me._remaining / this._fadeTime;
 		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-		console.log("Fading out. Remaining,ratio, and factor: ", me._remaining, x, fadeFactor);
 		me.setFadeVolume(parseFloat(fadeFactor));
 	}
 	//Fadein
 	if (fadeInZone) {
 		const x = me._position / this._fadeTime;
 		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-		console.log("Fading In. Position,ratio, and factor: ", me._position, x, fadeFactor);
 		me.setFadeVolume(parseFloat(fadeFactor));
 	}
 };
@@ -392,26 +389,16 @@ Media.onStatus = function(id, msgType, value) {
                 media._stopped = value == Media.MEDIA_STOPPED;
                 media._paused = value == Media.MEDIA_PAUSED;
 				media._ended = value == Media.MEDIA_ENDED;
-				console.log(
-					"received mediastate!",
-					Media.MEDIA_MSG[value],
-					media._loading,
-					media._playing,
-					media._stopped,
-					media._paused,
-					media._ended
-				);
 
                 if (media.statusCallback) {
                     media.statusCallback(value);
                 }
-				console.log("plugin media state updated!", value);
+				
 				media.autoUpdatePosition();
 				break;
 
             case Media.MEDIA_DURATION:
                 media._duration = value;
-                console.log("Updated duration", media._duration);
                 break;
 
             case Media.MEDIA_ERROR:
@@ -422,9 +409,7 @@ Media.onStatus = function(id, msgType, value) {
 
             case Media.MEDIA_POSITION:
                 media._position = Number(value);
-                media._remaining = media._duration - media._position;
-				media.autoUpdatePosition();
-                
+                media._remaining = media._duration - media._position;                
 				if (media.positionCallback) {
                     media.positionCallback(media._remaining);
                 }
