@@ -17,11 +17,11 @@
  * specific language governing permissions and limitations
  * under the License.
  *
-*/
+ */
 
-var argscheck = require('cordova/argscheck'),
-    utils = require('cordova/utils'),
-    exec = require('cordova/exec');
+var argscheck = require("cordova/argscheck"),
+    utils = require("cordova/utils"),
+    exec = require("cordova/exec");
 
 var mediaObjects = {};
 
@@ -40,7 +40,8 @@ var mediaObjects = {};
  *                                  successCallback(int position)
  */
 var Media = function(src, successCallback, errorCallback, statusCallback, positionCallback) {
-    argscheck.checkArgs('sFFF', 'Media', arguments);
+    argscheck.checkArgs("sFFF", "Media", arguments);
+    console.log("JS plugins/media created ", src, successCallback, errorCallback, statusCallback, positionCallback);
     this.id = utils.createUUID();
     mediaObjects[this.id] = this;
     this.src = src;
@@ -54,6 +55,7 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     exec(null, this.errorCallback, "Media", "create", [this.id, this.src]);
 
     this._mediaState = 0;
+
     this._paused = true;
     this._ended = false;
     this._started = false;
@@ -64,6 +66,8 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this._fadeIn = false;
     this._fadeOut = false;
     this._fadeTime = 0;
+    this._playlistIndex = -1;
+    this._mediaNumber = -1;
 };
 
 // Media messages
@@ -191,6 +195,26 @@ Media.prototype.setFadeOut = function(value) {
 };
 
 /**
+ * Playlist index and Media Instance Number
+ */
+Media.prototype.getMediaInstanceNumber = function() {
+    var me = this;
+    return me._mediaNumber;
+};
+Media.prototype.setMediaInstanceNumber = function(value) {
+    var me = this;
+    return (me._mediaNumber = value);
+};
+Media.prototype.getMediaPlaylistIndex = function() {
+    var me = this;
+    return me._playlistIndex;
+};
+Media.prototype.setMediaPlaylistIndex = function(value) {
+    var me = this;
+    return (me._playlistIndex = value);
+};
+
+/**
  * Get position of audio.
  */
 Media.prototype.getCurrentPosition = function(success, fail) {
@@ -206,7 +230,7 @@ Media.prototype.getCurrentPosition = function(success, fail) {
 Media.prototype.updatePosition = function() {
     var me = this;
     exec((p) => me._position = p, this.errorCallback, "Media", "getCurrentPositionAudio", [this.id]);
-    console.log("update position, ", me._position)
+    console.log("update position, ", me._position);
 };
 
 /**
@@ -231,8 +255,8 @@ Media.prototype.pauseRecord = function() {
 };
 
 /**
-* Resume recording audio file.
-*/
+ * Resume recording audio file.
+ */
 Media.prototype.resumeRecord = function() {
     exec(null, this.errorCallback, "Media", "resumeRecordingAudio", [this.id]);
 };
@@ -247,7 +271,7 @@ Media.prototype.release = function() {
 /**
  * Adjust the volume.
  */
- Media.prototype.setVolume = function(volume) {
+Media.prototype.setVolume = function(volume) {
     exec(null, null, "Media", "setVolume", [this.id, volume]);
     this._volume = volume;
 };
@@ -284,19 +308,18 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
  */
 Media.prototype.updateAudioPosition = function() {
     var me = this;
-    console.log("Audio playing. setInterval id: ", me._setInterval)
+    console.log("Audio playing. setInterval id: ", me._setInterval);
 
     if (me._running || me._playing) {
         //assing a setInterval of 200ms if there is no one assigned, otherwise keep as is
         if (me._setInterval === 0) {
-            me._setInterval = setInterval(() => me.updatePosition(), 200)
-            console.log("Audio setInterval set: ", me._setInterval)
+            me._setInterval = setInterval(() => me.updatePosition(), 200);
+            console.log("Audio setInterval set: ", me._setInterval);
         }
         //if is running, try to fade in-out
-        me.setFadeInOut()
-    }
-    else {
-        console.log("Audio Not Playing. SetInterval cleared: ", me._setInterval)
+        me.setFadeInOut();
+    } else {
+        console.log("Audio Not Playing. SetInterval cleared: ", me._setInterval);
         clearInterval(me._setInterval);
         me._setInterval = 0;
     }
@@ -307,19 +330,19 @@ Media.prototype.updateAudioPosition = function() {
 Media.prototype.setFadeInOut = function() {
     var me = this;
     //Fadeout - remaning 10000 to 0, finalGain 1 to 0.03
-    if (me._fadeOut && me._remaining <= me._fadeTime){
-        const fadeFactor = Math.cos((me._remaining / this._fadeTime) * 0.5 * Math.PI)
+    if (me._fadeOut && me._remaining <= me._fadeTime) {
+        const fadeFactor = Math.cos((me._remaining / this._fadeTime) * 0.5 * Math.PI);
         console.log("Fading out. Remaining and factor: ", me._remaining, fadeFactor);
         me.setFadeVolume(fadeFactor * me.getVolume());
     }
 
     //Fadeout - remaning 10000 to 0, finalGain 1 to 0.03
-    if (me._fadeIn && me._fadeTime > me._position){
-        const fadeFactor = Math.cos((me._remaining / this.fadeSeconds) * 0.5 * Math.PI)
+    if (me._fadeIn && me._fadeTime > me._position) {
+        const fadeFactor = Math.cos((me._remaining / this.fadeSeconds) * 0.5 * Math.PI);
         console.log("Fading In. Position and factor: ", me._position, fadeFactor);
         me.setFadeVolume(fadeFactor * me.getVolume());
     }
-}
+};
 
 /**
  * Audio has status update.
@@ -330,64 +353,64 @@ Media.prototype.setFadeInOut = function() {
  * @param value         Use of value is determined by the msgType
  */
 Media.onStatus = function(id, msgType, value) {
-
     var media = mediaObjects[id];
 
     if (media) {
-        switch(msgType) {
-            case Media.MEDIA_STATE :
+        switch (msgType) {
+            case Media.MEDIA_STATE:
                 media._mediaState = value;
-                media.updateAudioPosition();             
+                media.updateAudioPosition();
                 switch (value) {
-                    case Media.MEDIA_RUNNING :
+                    case Media.MEDIA_RUNNING:
                         media._playing = true;
                         media._loading = false;
                         media._ended = false;
                         media._stopped = false;
                         media._paused = false;
                         break;
-                    case Media.MEDIA_STARTING :
+                    case Media.MEDIA_STARTING:
                         media._playing = false;
                         media._loading = true;
                         media._ended = false;
                         media._stopped = false;
                         media._paused = false;
                         break;
-                    case Media.MEDIA_PAUSED :
+                    case Media.MEDIA_PAUSED:
                         media._playing = false;
                         media._paused = true;
                         break;
-                    case Media.MEDIA_STOPPED :
+                    case Media.MEDIA_STOPPED:
                         media._playing = false;
                         media._loading = false;
                         media._ended = false;
                         media._stopped = true;
                         media._paused = false;
-                        media.successCallback()
-                    break;
+                        media.successCallback();
+                        break;
                     default:
                         break;
-                }                
+                }
                 if (media.statusCallback) {
                     media.statusCallback(value);
                 }
                 break;
-            case Media.MEDIA_DURATION :
+            case Media.MEDIA_DURATION:
                 media._duration = value;
-                console.log("Updated duration", media._duration)
+                console.log("Updated duration", media._duration);
                 break;
-            case Media.MEDIA_ERROR :
+            case Media.MEDIA_ERROR:
                 if (media.errorCallback) {
                     media.errorCallback(value);
                 }
                 break;
-            case Media.MEDIA_POSITION :
+            case Media.MEDIA_POSITION:
                 media._position = Number(value);
                 media._remaining = media._duration - media._position;
                 media._playing = media._loading || media._running;
-                
+
                 media.positionCallback(media._remaining);
-                if (media._position > 0 && media._remaining == 0){
+
+                if (media._position > 0 && media._remaining == 0) {
                     media._ended = true;
                     media._paused = true;
                     media._started = false;
@@ -396,7 +419,7 @@ Media.onStatus = function(id, msgType, value) {
                     media.successCallback();
                 }
                 break;
-            default :
+            default:
                 if (console.error) {
                     console.error("Unhandled Media.onStatus :: " + msgType);
                 }
@@ -405,7 +428,6 @@ Media.onStatus = function(id, msgType, value) {
     } else if (console.error) {
         console.error("Received Media.onStatus callback for unknown media :: " + id);
     }
-
 };
 
 module.exports = Media;

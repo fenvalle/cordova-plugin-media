@@ -31,19 +31,19 @@ var mediaObjects = {};
  *
  * @constructor
  * @param src                   The file name or url to play
- * @param positionCallback       The callback to be called when the file is done playing or recording.
- *                                  positionCallback()
+ * @param statusCallback       The callback to be called when the file is done playing or recording.
+ *                                  statusCallback()
  * @param errorCallback         The callback to be called if there is an error.
  *                                  errorCallback(int errorCode) - OPTIONAL
  * @param statusCallback        The callback to be called when media status has changed.
  *                                  statusCallback(int statusCode) - OPTIONAL
  */
-var Media = function(src, positionCallback, errorCallback, statusCallback) {
+var Media = function(src, statusCallback, errorCallback, statusCallback) {
     argscheck.checkArgs('SFFF', 'Media', arguments);
     this.id = utils.createUUID();
     mediaObjects[this.id] = this;
     this.src = src;
-    this.positionCallback = positionCallback;
+    this.statusCallback = statusCallback;
     this.errorCallback = errorCallback;
     this.statusCallback = statusCallback;
     this._duration = -1;
@@ -263,8 +263,8 @@ Media.onStatus = function(id, msgType, value) {
                     media.statusCallback(value);
                 }
                 if (value === Media.MEDIA_STOPPED) {
-                    if (media.positionCallback) {
-                        media.positionCallback();
+                    if (media.statusCallback) {
+                        media.statusCallback();
                     }
                 }
                 break;

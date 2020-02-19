@@ -2,7 +2,7 @@
 // Project: https://github.com/apache/cordova-plugin-media
 // Definitions by: Microsoft Open Technologies Inc <http://msopentech.com>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-// 
+//
 // Copyright (c) Microsoft Open Technologies Inc
 // Licensed under the MIT license
 
@@ -11,7 +11,8 @@ declare var Media: {
         src: string,
         mediaSuccess: () => void,
         mediaError?: (error: MediaError) => any,
-        mediaStatus?: (status: number) => void): Media;
+        mediaStatus?: (status: number) => void,
+        mediaPosition?: (remaining: number) => any): Media;
         //Media statuses
         MEDIA_NONE: number;
         MEDIA_STARTING: number;
@@ -47,14 +48,34 @@ interface Media {
         mediaError?: (error: MediaError) => void): void;
     /** Returns the duration of an audio file in seconds. If the duration is unknown, it returns a value of -1. */
     getDuration(): number;
-	getPosition(): number;
-	getMediaState(): number;
-	getPaused(): boolean;
-	getStarted(): boolean;
-	getEnded(): boolean;
+    getPosition(): number;
+    getMediaState(): number;
+
+    getPaused(): boolean;
+    getStarted(): boolean;
+    getEnded(): boolean;
+    getLoading(): boolean;
+    getStopped(): boolean; 
+    /**
+     * New get-sets implemented
+     */
+    getFadeIn(): number;
+    setFadeIn(): void;
+    getFadeOut(): number;
+    setFadeOut(): void;
+    
+    getMediaInstanceNumber(): number;
+    setMediaInstanceNumber(): void;
+    getMediaPlaylistIndex(): number;
+    setMediaPlaylistIndex(): void;
+
     updatePosition(): void;
-    updatePlayingPosition(): void;
-    /** 
+    updateAudioPosition(): void;
+    getVolume(): number;
+    setFadeVolume(volume: number): void;
+    setFadeInOut(): void;
+
+    /**
      * Starts or resumes playing an audio file.
      * @param iosPlayOptions: iOS options quirks
      */
@@ -90,9 +111,8 @@ interface Media {
     position: number;
     /** The duration of the media, in seconds. */
     duration: number;
-	mediaState: number;
-	isPaused: boolean;
-	ended: boolean;
+    mediaState: number;
+    isPaused: boolean;
 }
 /**
  *  iOS optional parameters for media.play
