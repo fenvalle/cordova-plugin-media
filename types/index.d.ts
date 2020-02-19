@@ -19,7 +19,8 @@ declare var Media: {
         MEDIA_RUNNING: number;
         MEDIA_PAUSED: number;
         MEDIA_ENDED: number;
-        MEDIA_STOPPED: number
+        MEDIA_STOPPED: number;
+        MEDIA_FADING_OUT: number;
 };
 
 /**
@@ -52,29 +53,35 @@ interface Media {
     getMediaState(): number;
 
     getPaused(): boolean;
-    getStarted(): boolean;
+    getPlaying(): boolean;
     getEnded(): boolean;
     getLoading(): boolean;
     getStopped(): boolean; 
     /**
      * New get-sets implemented
      */
-    getFadeIn(): number;
-    setFadeIn(): void;
-    getFadeOut(): number;
-    setFadeOut(): void;
-    
+    getFadeIn(): boolean;
+    getFadeOut(): boolean;
+    getFadingOut(): boolean;
+    setFadeIn(value: boolean): void;
+    setFadeOut(value: boolean): void;
+    setFadingOut(value: boolean): void;
+
+    setFadeVolume(volume: number): void;
+    setFadeInOut(): void;
+    setFadeTime(seconds: number): void;
+
     getMediaInstanceNumber(): number;
-    setMediaInstanceNumber(): void;
     getMediaPlaylistIndex(): number;
-    setMediaPlaylistIndex(): void;
+    setMediaInstanceNumber(instance: number): void;
+    setMediaPlaylistIndex(index: number): void;
 
     updatePosition(): void;
     updateAudioPosition(): void;
-    getVolume(): number;
-    setFadeVolume(volume: number): void;
-    setFadeInOut(): void;
-
+    getVolume(): number;  
+    getPrimary(): boolean;  
+    setPrimary(value: boolean): void;  
+    
     /**
      * Starts or resumes playing an audio file.
      * @param iosPlayOptions: iOS options quirks

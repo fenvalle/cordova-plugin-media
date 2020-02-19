@@ -61,7 +61,6 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this._started = false;
     this._loading = false;
     this._stopped = true;
-    this._setInterval = 0;
     this._volume = 1;
     this._fadeIn = false;
     this._fadeOut = false;
@@ -304,24 +303,17 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
 };
 
 /**
- * When playing updateAudioPosition of audio.
+ * Recursive When playing autoUpdatePosition of audio when running.
  */
-Media.prototype.updateAudioPosition = function() {
+Media.prototype.autoUpdatePosition = function() {
     var me = this;
-    console.log("Audio playing. setInterval id: ", me._setInterval);
-
-    if (me._running || me._playing) {
-        //assing a setInterval of 200ms if there is no one assigned, otherwise keep as is
-        if (me._setInterval === 0) {
-            me._setInterval = setInterval(() => me.updatePosition(), 200);
-            console.log("Audio setInterval set: ", me._setInterval);
-        }
-        //if is running, try to fade in-out
+    me.updatePosition()
+    console.log("Audio position updated", me.getPosition());
+    
+    if (me._playing) {
+        console.log("Playing - keep recursive", me.getPosition());
+        setTimeout(()=> me.autoUpdatePosition(), 200);
         me.setFadeInOut();
-    } else {
-        console.log("Audio Not Playing. SetInterval cleared: ", me._setInterval);
-        clearInterval(me._setInterval);
-        me._setInterval = 0;
     }
 };
 /**
@@ -359,50 +351,30 @@ Media.onStatus = function(id, msgType, value) {
         switch (msgType) {
             case Media.MEDIA_STATE:
                 media._mediaState = value;
-                media.updateAudioPosition();
-                switch (value) {
-                    case Media.MEDIA_RUNNING:
-                        media._playing = true;
-                        media._loading = false;
-                        media._ended = false;
-                        media._stopped = false;
-                        media._paused = false;
-                        break;
-                    case Media.MEDIA_STARTING:
-                        media._playing = false;
-                        media._loading = true;
-                        media._ended = false;
-                        media._stopped = false;
-                        media._paused = false;
-                        break;
-                    case Media.MEDIA_PAUSED:
-                        media._playing = false;
-                        media._paused = true;
-                        break;
-                    case Media.MEDIA_STOPPED:
-                        media._playing = false;
-                        media._loading = false;
-                        media._ended = false;
-                        media._stopped = true;
-                        media._paused = false;
-                        media.successCallback();
-                        break;
-                    default:
-                        break;
+                media._playing = value == Media.MEDIA_RUNNING;
+                media._loading = value == Media.MEDIA_STARTING;
+                media._stopped = value == Media.MEDIA_STOPPED;
+                media._paused = value == Media.MEDIA_PAUSED;
+                media._ended = value == Media._position == 0;
+                if (media._stopped) {
+                    media.successCallback();
                 }
                 if (media.statusCallback) {
                     media.statusCallback(value);
                 }
                 break;
+
             case Media.MEDIA_DURATION:
                 media._duration = value;
                 console.log("Updated duration", media._duration);
                 break;
+
             case Media.MEDIA_ERROR:
                 if (media.errorCallback) {
                     media.errorCallback(value);
                 }
                 break;
+
             case Media.MEDIA_POSITION:
                 media._position = Number(value);
                 media._remaining = media._duration - media._position;
@@ -425,6 +397,7 @@ Media.onStatus = function(id, msgType, value) {
                 }
                 break;
         }
+        media.autoUpdatePosition();
     } else if (console.error) {
         console.error("Received Media.onStatus callback for unknown media :: " + id);
     }
