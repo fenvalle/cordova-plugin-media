@@ -167,7 +167,7 @@ Media.prototype.getPaused = function() {
     var me = this;
     return me._paused;
 };
-Media.prototype.getStarted = function() {
+Media.prototype.getPlaying = function() {
     var me = this;
     return me._started;
 };
