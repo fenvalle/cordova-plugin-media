@@ -111,6 +111,9 @@ interface Media {
     stopRecord(): void;
     /** Stops playing an audio file. */
     stop(): void;
+    
+    // id(): any;
+    // src(): string;
     /**
      * The position within the audio playback, in seconds.
      * Not automatically updated during play; call getCurrentPosition to update.
@@ -119,7 +122,8 @@ interface Media {
     /** The duration of the media, in seconds. */
     duration: number;
     mediaState: number;
-    isPaused: boolean;
+    id: any;
+    src: string;
 }
 /**
  *  iOS optional parameters for media.play

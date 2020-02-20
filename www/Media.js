@@ -134,7 +134,14 @@ Media.prototype.pause = function() {
     exec(null, this.errorCallback, "Media", "pausePlayingAudio", [this.id]);
 };
 
-
+Media.prototype.id = function() {
+    var me = this;
+    return me.id;
+};
+Media.prototype.src = function() {
+    var me = this;
+    return me.src;
+};
 /**
  * Get duration of an audio file.
  * The duration is only set for audio that is playing, paused or stopped.
@@ -204,6 +211,10 @@ Media.prototype.getFadeOut = function() {
 Media.prototype.setFadeOut = function(value) {
     var me = this;
     return me._fadeOut = value;
+};
+Media.prototype.setFadeTime = function(value) {
+	var me = this;
+	return (me._fadeTime = value);
 };
 Media.prototype.getFadingOut = function() {
 	var me = this;
