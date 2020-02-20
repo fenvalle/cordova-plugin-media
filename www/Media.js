@@ -91,6 +91,24 @@ Media.get = function(id) {
 	return mediaObjects[id];
 };
 
+// "static" function to list existing objs.
+Media.list = function() {
+	return mediaObjects;
+};
+
+// "static" function to list existing objs.
+Media.running = function() {
+	return mediaObjects.filter(x=> x._mediaState == Media.MEDIA_RUNNING);
+};
+
+Media.primary = function() {
+	return mediaObjects.filter(x=> x._primary);
+};
+
+Media.secondary = function() {
+	return mediaObjects.filter(x=> !x._primary);
+};
+
 /**
  * Start or resume playing audio file.
  */
@@ -159,6 +177,10 @@ Media.prototype.getPosition = function() {
 Media.prototype.getMediaState = function() {
     var me = this;
     return me._mediaState;
+};
+Media.prototype.getState = function() {
+    var me = this;
+    return Media.MEDIA_MSG[me._mediaState] || "";
 };
 /**
  * Specific statuses

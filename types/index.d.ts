@@ -51,6 +51,13 @@ interface Media {
     getDuration(): number;
     getPosition(): number;
     getMediaState(): number;
+    getState(): string;
+
+    get(id: string): any;
+    list(): any;
+    running(): any;
+    primary(): any;
+    secondary(): any;
 
     getPaused(): boolean;
     getPlaying(): boolean;
