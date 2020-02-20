@@ -394,7 +394,7 @@ Media.onStatus = function(id, msgType, value) {
     if (media) {
         switch (msgType) {
             case Media.MEDIA_STATE:
-                if (value == Media.MEDIA_STOPPED && media._duration > 0){
+                if (value == Media.MEDIA_STOPPED && media._position > 0){
                     value = Media.MEDIA_ENDED; // workaround for naturally finished
                 }
                 media._mediaState = value;
