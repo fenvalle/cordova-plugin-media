@@ -98,15 +98,15 @@ Media.list = function() {
 
 // "static" function to list existing objs.
 Media.running = function() {
-	return mediaObjects.filter(x=> x._mediaState == Media.MEDIA_RUNNING);
+	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._mediaState == Media.MEDIA_RUNNING);
 };
 
 Media.primary = function() {
-	return mediaObjects.filter(x=> x._primary);
+	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._primary);
 };
 
 Media.secondary = function() {
-	return mediaObjects.filter(x=> !x._primary);
+	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> !x._primary);
 };
 
 /**
