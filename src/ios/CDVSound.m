@@ -263,12 +263,13 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(itemStalledPlaying:) name:AVPlayerItemPlaybackStalledNotification object:playerItem];
 
             // Pass the AVPlayerItem to a new player
-            avPlayer = [[AVPlayer alloc] initWithPlayerItem:playerItem];
+            //the avPlayer will not be replaced anymore, instead a new instance will be created always
+            audioFile.avPlayerInstance = [[AVPlayer alloc] initWithPlayerItem:playerItem];
 
             // Avoid excessive buffering so streaming media can play instantly on iOS
             // Removes preplay delay on ios 10+, makes consistent with ios9 behaviour
             if ([NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){10,0,0}]) {
-                avPlayer.automaticallyWaitsToMinimizeStalling = NO;
+                audioFile.avPlayerInstance.automaticallyWaitsToMinimizeStalling = NO;
             }
         }
 
@@ -297,7 +298,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             else {
                 float customVolume = [volume floatValue];
                 if (customVolume >= 0.0 && customVolume <= 1.0) {
-                    [avPlayer setVolume: customVolume];
+                    [audioFile.avPlayerInstance setVolume: customVolume];
                 }
                 else {
                     NSLog(@"The value must be within the range of 0.0 to 1.0");
@@ -326,9 +327,9 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                 audioFile.player.enableRate = YES;
                 audioFile.player.rate = [rate floatValue];
             }
-            if (avPlayer.currentItem && avPlayer.currentItem.asset){
+            if (audioFile.avPlayerInstance.currentItem && audioFile.avPlayerInstance.currentItem.asset){
                 float customRate = [rate floatValue];
-                [avPlayer setRate:customRate];
+                [audioFile.avPlayerInstance setRate:customRate];
             }
 
             [[self soundCache] setObject:audioFile forKey:mediaId];
@@ -370,8 +371,13 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                     bPlayAudioWhenScreenIsLocked = [playAudioWhenScreenIsLocked boolValue];
                 }
 
-                NSString* sessionCategory = bPlayAudioWhenScreenIsLocked ? AVAudioSessionCategoryPlayback : AVAudioSessionCategorySoloAmbient;
-                [self.avSession setCategory:sessionCategory error:&err];
+                if (bPlayAudioWhenScreenIsLocked) {
+                    [self.avSession setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&err];
+                }
+                else {
+                    [self.avSession setCategory:AVAudioSessionCategorySoloAmbient error:&err];
+                }
+                
                 if (![self.avSession setActive:YES error:&err]) {
                     // other audio with higher priority that does not allow mixing could cause this to fail
                     NSLog(@"Unable to play audio: %@", [err localizedFailureReason]);
@@ -381,8 +387,8 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             if (!bError) {
                 NSLog(@"Playing audio sample '%@'", audioFile.resourcePath);
                 double duration = 0;
-                if (avPlayer.currentItem && avPlayer.currentItem.asset) {
-                    CMTime time = avPlayer.currentItem.asset.duration;
+                if (audioFile.avPlayerInstance.currentItem && audioFile.avPlayerInstance.currentItem.asset) {
+                    CMTime time = audioFile.avPlayerInstance.currentItem.asset.duration;
                     duration = CMTimeGetSeconds(time);
                     if (isnan(duration)) {
                         NSLog(@"Duration is infifnite, setting it to -1");
@@ -392,10 +398,10 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                     if (audioFile.rate != nil){
                         float customRate = [audioFile.rate floatValue];
                         NSLog(@"Playing stream with AVPlayer & custom rate");
-                        [avPlayer setRate:customRate];
+                        [audioFile.avPlayerInstance setRate:customRate];
                     } else {
                         NSLog(@"Playing stream with AVPlayer & default rate");
-                        [avPlayer play];
+                        [audioFile.avPlayerInstance play];
                     }
 
                 } else {
@@ -496,7 +502,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     } else {
         audioFile.player.mediaId = mediaId;
         audioFile.player.delegate = self;
-        if (avPlayer == nil)
+        if (audioFile.avPlayerInstance == nil)
             bError = ![audioFile.player prepareToPlay];
     }
     return bError;
@@ -514,20 +520,20 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_STOPPED)];
     }
     // seek to start and pause
-    if (avPlayer.currentItem && avPlayer.currentItem.asset) {
-        BOOL isReadyToSeek = (avPlayer.status == AVPlayerStatusReadyToPlay) && (avPlayer.currentItem.status == AVPlayerItemStatusReadyToPlay);
+    if (audioFile.avPlayerInstance.currentItem && audioFile.avPlayerInstance.currentItem.asset) {
+        BOOL isReadyToSeek = (audioFile.avPlayerInstance.status == AVPlayerStatusReadyToPlay);
         if (isReadyToSeek) {
-            [avPlayer seekToTime: kCMTimeZero
+            [audioFile.avPlayerInstance seekToTime: kCMTimeZero
                  toleranceBefore: kCMTimeZero
                   toleranceAfter: kCMTimeZero
                completionHandler: ^(BOOL finished){
-                   if (finished) [avPlayer pause];
+                   if (finished) [audioFile.avPlayerInstance pause];
                }];
             [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_STOPPED)];
         } else {
             // cannot seek, wrong state
             [self onStatus:MEDIA_ERROR mediaId:mediaId param:
-              [self createMediaErrorWithCode:MEDIA_ERR_NONE_ACTIVE message:"Cannot Stop until AVPlayerStatusReadyToPlay state"]];
+              [self createMediaErrorWithCode:MEDIA_ERR_NONE_ACTIVE message:@"Cannot Stop until AVPlayerStatusReadyToPlay state"]];
         }
     }
 }
@@ -537,12 +543,12 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     NSString* mediaId = [command argumentAtIndex:0];
     CDVAudioFile* audioFile = [[self soundCache] objectForKey:mediaId];
 
-    if ((audioFile != nil) && ((audioFile.player != nil) || (avPlayer != nil))) {
+    if ((audioFile != nil) && ((audioFile.player != nil) || (audioFile.avPlayerInstance != nil))) {
         NSLog(@"Paused playing audio sample '%@'", audioFile.resourcePath);
         if (audioFile.player != nil) {
             [audioFile.player pause];
-        } else if (avPlayer != nil) {
-            [avPlayer pause];
+        } else if (audioFile.avPlayerInstance != nil) {
+            [audioFile.avPlayerInstance pause];
         }
 
         [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_PAUSED)];
@@ -573,22 +579,22 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             [self onStatus:MEDIA_POSITION mediaId:mediaId param:@(posInSeconds)];
         }
 
-    } else if (avPlayer != nil) {
-        int32_t timeScale = avPlayer.currentItem.asset.duration.timescale;
+    } else if (audioFile.avPlayerInstance != nil) {
+        int32_t timeScale = audioFile.avPlayerInstance.currentItem.asset.duration.timescale;
         CMTime timeToSeek = CMTimeMakeWithSeconds(posInSeconds, timeScale);
 
-        BOOL isPlaying = (avPlayer.rate > 0 && !avPlayer.error);
-        BOOL isReadyToSeek = (avPlayer.status == AVPlayerStatusReadyToPlay) && (avPlayer.currentItem.status == AVPlayerItemStatusReadyToPlay);
+        BOOL isPlaying = (audioFile.avPlayerInstance.rate > 0 && !audioFile.avPlayerInstance.error);
+        BOOL isReadyToSeek = (audioFile.avPlayerInstance.status == AVPlayerStatusReadyToPlay) && (audioFile.avPlayerInstance.currentItem.status == AVPlayerItemStatusReadyToPlay);
 
         // CB-10535:
         // When dealing with remote files, we can get into a situation where we start playing before AVPlayer has had the time to buffer the file to be played.
         // To avoid the app crashing in such a situation, we only seek if both the player and the player item are ready to play. If not ready, we send an error back to JS land.
         if(isReadyToSeek) {
-            [avPlayer seekToTime: timeToSeek
+            [audioFile.avPlayerInstance seekToTime: timeToSeek
                  toleranceBefore: kCMTimeZero
                   toleranceAfter: kCMTimeZero
                completionHandler: ^(BOOL finished) {
-                   if (isPlaying) [avPlayer play];
+                   if (isPlaying) [audioFile.avPlayerInstance play];
                }];
         } else {
             NSString* errMsg = @"AVPlayerItem cannot service a seek request with a completion handler until its status is AVPlayerItemStatusReadyToPlay.";
@@ -614,9 +620,9 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             if (audioFile.recorder && [audioFile.recorder isRecording]) {
                 [audioFile.recorder stop];
             }
-            if (avPlayer != nil) {
-                [avPlayer pause];
-                avPlayer = nil;
+            if (audioFile.avPlayerInstance != nil) {
+                [audioFile.avPlayerInstance pause];
+                audioFile.avPlayerInstance = nil;
             }
             if (! keepAvAudioSessionAlwaysActive && self.avSession && ! [self isPlayingOrRecording]) {
                 [self.avSession setActive:NO error:nil];
@@ -640,8 +646,8 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     if ((audioFile != nil) && (audioFile.player != nil) && [audioFile.player isPlaying]) {
         position = round(audioFile.player.currentTime * 1000) / 1000;
     }
-    if (avPlayer) {
-       CMTime time = [avPlayer currentTime];
+    if (audioFile.avPlayerInstance) {
+       CMTime time = [audioFile.avPlayerInstance currentTime];
        position = CMTimeGetSeconds(time);
     }
 
