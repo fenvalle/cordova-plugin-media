@@ -66,7 +66,7 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this._fadeOut = false;
 	this._fadeTime = 7;
 	this._fadingOut = false;
-    this._playlistIndex = -1;
+    this._mediaId = '0';
     this._mediaNumber = -1;
 };
 
@@ -258,13 +258,13 @@ Media.prototype.setMediaInstanceNumber = function(value) {
     var me = this;
     return (me._mediaNumber = value);
 };
-Media.prototype.getMediaPlaylistIndex = function() {
+Media.prototype.getMediaId = function() {
     var me = this;
-    return me._playlistIndex;
+    return me._media'0';
 };
-Media.prototype.setMediaPlaylistIndex = function(value) {
+Media.prototype.setMediaId = function(value) {
     var me = this;
-    return (me._playlistIndex = value);
+    return (me._mediaId = valu'0';
 };
 
 /**

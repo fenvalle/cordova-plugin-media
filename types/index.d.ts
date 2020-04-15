@@ -6,7 +6,7 @@
 // Copyright (c) Microsoft Open Technologies Inc
 // Licensed under the MIT license
 
-declare var Media: {
+export declare var Media: {
     new (
         src: string,
         mediaSuccess: () => void,
@@ -29,7 +29,7 @@ declare var Media: {
  * and is provided for convenience only. A future implementation will adhere to the latest
  * W3C specification and may deprecate the current APIs.
  */
-interface Media {
+export interface Media {
     updateInterval: number;
     /**
      * Returns the current amplitude within an audio file.
@@ -79,9 +79,9 @@ interface Media {
     setFadeTime(seconds: number): void;
 
     getMediaInstanceNumber(): number;
-    getMediaPlaylistIndex(): number;
     setMediaInstanceNumber(instance: number): void;
-    setMediaPlaylistIndex(index: number): void;
+    getMediaId(): string;
+    setMediaId(id: string): void;
 
     updatePosition(): void;
     updateAudioPosition(): void;
@@ -136,7 +136,7 @@ interface Media {
  *  iOS optional parameters for media.play
  *  See https://github.com/apache/cordova-plugin-media#ios-quirks
  */
-interface IosPlayOptions {
+export interface IosPlayOptions {
     numberOfLoops?: number;
     playAudioWhenScreenIsLocked?: boolean;
 }
