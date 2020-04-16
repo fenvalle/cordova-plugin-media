@@ -72,6 +72,7 @@ export interface Media {
     getFadingOut(): boolean;
     setFadeIn(value: boolean): void;
     setFadeOut(value: boolean): void;
+    setForceFadeOut(value: boolean): void;
     setFadingOut(value: boolean): void;
 
     setFadeVolume(volume: number): void;

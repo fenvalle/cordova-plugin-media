@@ -54,7 +54,8 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     exec(null, this.errorCallback, "Media", "create", [this.id, this.src]);
 
     this._mediaState = 0;
-
+    this._forceFadeOut = false;
+    this._forceFadeEnd = 0;
 	this._primary = true;
     this._playing = false;
     this._paused = true;
@@ -64,7 +65,7 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this._volume = 1;
     this._fadeIn = false;
     this._fadeOut = false;
-	this._fadeTime = 7;
+	this._fadeTime = 5;
 	this._fadingOut = false;
     this._mediaId = '0';
     this._mediaNumber = -1;
@@ -234,6 +235,11 @@ Media.prototype.setFadeOut = function(value) {
     var me = this;
     return me._fadeOut = value;
 };
+Media.prototype.setForceFadeOut = function(value) {
+    var me = this;
+    me._forceFadeOut = value;
+    return me._forceFadeEnd = me._position + me._fadeTime;
+};
 Media.prototype.setFadeTime = function(value) {
 	var me = this;
 	return (me._fadeTime = value);
@@ -260,11 +266,11 @@ Media.prototype.setMediaInstanceNumber = function(value) {
 };
 Media.prototype.getMediaId = function() {
     var me = this;
-    return me._media'0';
+    return me._mediaId;
 };
 Media.prototype.setMediaId = function(value) {
     var me = this;
-    return (me._mediaId = valu'0';
+    return (me._mediaId = value);
 };
 
 /**
@@ -332,7 +338,8 @@ Media.prototype.getVolume = function() {
     return me._volume;
 };
 Media.prototype.setFadeVolume = function(fadeVolume) {
-    exec(null, null, "Media", "setVolume", [this.id, fadeVolume]);
+    var me = this;
+    exec(null, null, "Media", "setVolume", [this.id, me._volume * fadeVolume]);
 };
 
 /**
@@ -381,7 +388,16 @@ Media.prototype.setFadeInOut = function() {
 	// Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
 	// Math.cos(x * 0.5 * Math.PI);
 
-	// FadeOut
+    if (me._forceFadeOut) {
+        if (this._position >= this._forceFadeEnd) {
+            return me.pause();
+        }
+        const x = (this._forceFadeEnd - this._position) / this._fadeTime;
+        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
+        me.setFadeVolume(parseFloat(fadeFactor));
+        return;
+    }
+    // FadeOut
 	if (fadeOutZone) {
 		if (!me._fadingOut){
 			//ensures only one FadingOut event sent
@@ -391,13 +407,13 @@ Media.prototype.setFadeInOut = function() {
 		}
 		
 		const x = me._remaining / this._fadeTime;
-		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
+        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
 		me.setFadeVolume(parseFloat(fadeFactor));
 	}
 	//Fadein
 	if (fadeInZone) {
 		const x = me._position / this._fadeTime;
-		const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
+        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
 		me.setFadeVolume(parseFloat(fadeFactor));
 	}
 };
