@@ -12,10 +12,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/fenvalle/cordova-plugin-media"
+    "url": "https://github.com/apache/cordova-plugin-media"
   },
   "bugs": {
-    "url": "https://github.com/fenvalle/cordova-plugin-media/issues"
+    "url": "https://github.com/apache/cordova-plugin-media/issues"
   },
   "keywords": [
     "cordova",
