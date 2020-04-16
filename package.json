@@ -1,23 +1,21 @@
 {
   "name": "cordova-plugin-media",
-  "version": "5.0.4-dev",
-  "description": "Cordova Media Plugin",
+  "version": "5.1",
+  "description": "Vigil Cordova Media Plugin",
   "types": "./types/index.d.ts",
   "cordova": {
     "id": "cordova-plugin-media",
     "platforms": [
       "android",
-      "browser",
-      "ios",
-      "windows"
+      "ios"
     ]
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/apache/cordova-plugin-media"
+    "url": "https://github.com/fenvalle/cordova-plugin-media"
   },
   "bugs": {
-    "url": "https://github.com/apache/cordova-plugin-media/issues"
+    "url": "https://github.com/fenvalle/cordova-plugin-media/issues"
   },
   "keywords": [
     "cordova",
