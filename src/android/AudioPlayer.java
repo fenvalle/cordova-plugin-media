@@ -650,6 +650,10 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                             return true;
                         }
                     } else {
+                        if (this.player == null) {
+                          this.player = new MediaPlayer();
+                          this.player.setOnErrorListener(this);
+                        }
                         //reset the player
                         this.player.reset();
                         try {
