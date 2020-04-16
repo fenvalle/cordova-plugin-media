@@ -390,7 +390,8 @@ Media.prototype.setFadeInOut = function() {
 
     if (me._forceFadeOut) {
         if (this._position >= this._forceFadeEnd) {
-            return me.pause();
+            me.setForceFadeOut(false);
+            return me.stop();
         }
         const x = (this._forceFadeEnd - this._position) / this._fadeTime;
         const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
