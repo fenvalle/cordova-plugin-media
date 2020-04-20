@@ -192,7 +192,7 @@ Media.prototype.getPaused = function() {
 };
 Media.prototype.getPlaying = function() {
     var me = this;
-    return me._started;
+    return me._playing;
 };
 Media.prototype.getEnded = function() {
     var me = this;
