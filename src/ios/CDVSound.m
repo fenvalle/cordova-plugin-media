@@ -832,9 +832,9 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     // Will be called when AVPlayer finishes playing playerItem
     NSString* mediaId = self.currMediaId;
 
-     if (! keepAvAudioSessionAlwaysActive && self.avSession && ! [self isPlayingOrRecording]) {
-         [self.avSession setActive:NO error:nil];
-     }
+    //  if (! keepAvAudioSessionAlwaysActive && self.avSession && ! [self isPlayingOrRecording]) {
+        //  [self.avSession setActive:NO error:nil];
+    //  }
     [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_ENDED)];
 }
 
