@@ -90,10 +90,14 @@ Media.MEDIA_MSG = ["None", "Starting", "Running", "Paused", "Stopped", "Ended", 
 Media.get = function(id) {
 	return mediaObjects[id];
 };
+//get item by mediaId
+Media.getByMediaId = function(id) {
+	return Object.values(mediaObjects).find(x=> x._mediaId.toString() === id.toString());
+};
 
 // "static" function to list existing objs.
 Media.list = function() {
-	return mediaObjects;
+    return Object.values(mediaObjects);
 };
 
 // "static" function to list existing objs.
@@ -376,7 +380,7 @@ Media.prototype.checkFadeZone = function() {
 	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me._remaining <= me._fadeTime;
     const fadeInZone = me._fadeIn && me._position < me._fadeTime;
 
-    if (fadeOutZon && _fadingOut === false) {
+    if (fadeOutZon && me._fadingOut === false) {
         me._fadingOut = true;
         me._endPosition = me._position + me._fadeTime;
         me.statusCallback(Media.MEDIA_FADING_OUT);

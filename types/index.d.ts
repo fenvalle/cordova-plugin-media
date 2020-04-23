@@ -53,6 +53,7 @@ export interface Media {
     getMediaState(): number;
     getState(): string;
     get(id: string): any;
+    getByMediaId(id: string): any;
     list(): any;
     running(): any;
 
