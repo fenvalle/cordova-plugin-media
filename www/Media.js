@@ -54,18 +54,17 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     exec(null, this.errorCallback, "Media", "create", [this.id, this.src]);
 
     this._mediaState = 0;
-    this._forceFadeOut = false;
-    this._forceFadeEnd = 0;
-	this._primary = true;
+    this._endPosition = 0;
     this._playing = false;
     this._paused = true;
     this._ended = false;
     this._loading = false;
-    this._stopped = true;
+    this._stopped = false;
     this._volume = 1;
     this._fadeIn = false;
     this._fadeOut = false;
-	this._fadeTime = 5;
+    this._fadeTime = 5;
+    this._forceFadeOut = false;
 	this._fadingOut = false;
     this._mediaId = '0';
     this._mediaNumber = -1;
@@ -102,14 +101,6 @@ Media.running = function() {
 	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._mediaState == Media.MEDIA_RUNNING);
 };
 
-Media.primary = function() {
-	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._primary);
-};
-
-Media.secondary = function() {
-	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> !x._primary);
-};
-
 /**
  * Start or resume playing audio file.
  */
@@ -123,7 +114,10 @@ Media.prototype.play = function(options) {
  * Stop playing audio file.
  */
 Media.prototype.stop = function() {
-	var me = this;
+    var me = this;
+    me.setForceFadeOut(false);
+    me.setFadingOut(false);
+    //when stoped, disable fading out
 	exec(
 		function() {
 			me._position = 0;
@@ -206,16 +200,6 @@ Media.prototype.getStopped = function() {
     var me = this;
     return me._stopped;
 };
-
-Media.prototype.getPrimary = function() {
-	var me = this;
-	return me._primary;
-};
-Media.prototype.setPrimary = function(value) {
-	var me = this;
-	return (me._primary = value);
-};
-
 /**
  * Fade timings
  */
@@ -238,7 +222,7 @@ Media.prototype.setFadeOut = function(value) {
 Media.prototype.setForceFadeOut = function(value) {
     var me = this;
     me._forceFadeOut = value;
-    return me._forceFadeEnd = me._position + me._fadeTime;
+    return me._endPosition = me._position + me._fadeTime;
 };
 Media.prototype.setFadeTime = function(value) {
 	var me = this;
@@ -253,17 +237,6 @@ Media.prototype.setFadingOut = function(value) {
 	return (me._fadingOut = value);
 };
 
-/**
- * Playlist index and Media Instance Number
- */
-Media.prototype.getMediaInstanceNumber = function() {
-    var me = this;
-    return me._mediaNumber;
-};
-Media.prototype.setMediaInstanceNumber = function(value) {
-    var me = this;
-    return (me._mediaNumber = value);
-};
 Media.prototype.getMediaId = function() {
     var me = this;
     return me._mediaId;
@@ -333,8 +306,10 @@ Media.prototype.release = function() {
  * Adjust the volume.
  */
 Media.prototype.setVolume = function(volume) {
+    var me = this;
+    me._volume = volume;
+    console.log("volume set to", volume);
     exec(null, null, "Media", "setVolume", [this.id, volume]);
-    this._volume = volume;
 };
 Media.prototype.getVolume = function() {
     var me = this;
@@ -371,55 +346,45 @@ Media.prototype.getCurrentAmplitude = function(success, fail) {
 Media.prototype.autoUpdatePosition = function() {
     var me = this;
     if (me._mediaState == Media.MEDIA_RUNNING) {
-    	me.updatePosition()
-        setTimeout(()=> me.autoUpdatePosition(), 100);
-        me.setFadeInOut();
+    	me.updatePosition();
+        setTimeout(()=> me.autoUpdatePosition(), 166);
+        me.checkFadeZone();
+    } else {
+
     }
 };
-/**
- * When set, update FadeIn and FadeOut
- */
-Media.prototype.setFadeInOut = function() {
-	var me = this;
-	const fadeOutZone = me._fadeOut && me._fadeTime >= me._remaining && me._position > me._fadeTime;
-	const fadeInZone = me._fadeIn && me._fadeTime > me._position;
 
-	// // FadeOut - equal power: from 100% to 0%
-	// Math.sqrt(0.5 + 0.5 * Math.cos(Math.PI * x));
-	// Math.cos((1 - x) * 0.5 * Math.PI);
-	// // FadeIn - equal power: from 0% to 100%
-	// Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-	// Math.cos(x * 0.5 * Math.PI);
-
-    if (me._forceFadeOut) {
-        if (this._position >= this._forceFadeEnd) {
-            me.setForceFadeOut(false);
-            return me.stop();
-        }
-        const x = (this._forceFadeEnd - this._position) / this._fadeTime;
-        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-        me.setFadeVolume(parseFloat(fadeFactor));
-        return;
+Media.prototype.doFadeOut = function() {
+    var me = this;
+    if (me._position >= me._endPosition) {
+        return me.stop();
     }
-    // FadeOut
-	if (fadeOutZone) {
-		if (!me._fadingOut){
-			//ensures only one FadingOut event sent
-            console.log("fading Out false, setting to true and statusCallback 6")
-			me._fadingOut = true;
-			me.statusCallback(Media.MEDIA_FADING_OUT);
-		}
-		
-		const x = me._remaining / this._fadeTime;
-        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-		me.setFadeVolume(parseFloat(fadeFactor));
-	}
-	//Fadein
-	if (fadeInZone) {
-		const x = me._position / this._fadeTime;
-        const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
-		me.setFadeVolume(parseFloat(fadeFactor));
-	}
+    const x = (me._endPosition - me._position) / me._fadeTime;
+    const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
+    me.setFadeVolume(parseFloat(fadeFactor));
+}
+Media.prototype.doFadeIn = function() {
+    var me = this;
+    const x = me._position / me._fadeTime;
+    const fadeFactor = Math.sqrt(0.5 - 0.5 * Math.cos(Math.PI * x));
+    me.setFadeVolume(parseFloat(fadeFactor));
+}
+Media.prototype.checkFadeZone = function() {
+    var me = this;
+
+    const forcedFade = me._forceFadeOut;
+	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me._remaining <= me._fadeTime;
+    const fadeInZone = me._fadeIn && me._position < me._fadeTime;
+
+    if (fadeOutZon && _fadingOut === false) {
+        me._fadingOut = true;
+        me._endPosition = me._position + me._fadeTime;
+        me.statusCallback(Media.MEDIA_FADING_OUT);
+        console.log(me._mediaId, "enabling fading Out, starting ", me._position, " ending ", me._endPosition);
+    }
+	fadeInZone && me.doFadeIn();
+    forcedFade && me.doFadeOut();
+    fadeOutZon && me.doFadeOut();
 };
 
 /**
@@ -436,9 +401,6 @@ Media.onStatus = function(id, msgType, value) {
     if (media) {
         switch (msgType) {
             case Media.MEDIA_STATE:
-                if (value == Media.MEDIA_STOPPED && media._duration > 1 && media._position >= 0){
-                    value = Media.MEDIA_ENDED; // workaround for naturally finished
-                }
                 media._mediaState = value;
                 media._playing = value == Media.MEDIA_RUNNING;
                 media._loading = value == Media.MEDIA_STARTING;

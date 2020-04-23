@@ -52,12 +52,9 @@ export interface Media {
     getPosition(): number;
     getMediaState(): number;
     getState(): string;
-
     get(id: string): any;
     list(): any;
     running(): any;
-    primary(): any;
-    secondary(): any;
 
     getPaused(): boolean;
     getPlaying(): boolean;
@@ -72,6 +69,7 @@ export interface Media {
     getFadingOut(): boolean;
     setFadeIn(value: boolean): void;
     setFadeOut(value: boolean): void;
+    //used with me._position + me._fadeTime
     setForceFadeOut(value: boolean): void;
     setFadingOut(value: boolean): void;
 
@@ -79,16 +77,12 @@ export interface Media {
     setFadeInOut(): void;
     setFadeTime(seconds: number): void;
 
-    getMediaInstanceNumber(): number;
-    setMediaInstanceNumber(instance: number): void;
     getMediaId(): string;
     setMediaId(id: string): void;
 
     updatePosition(): void;
     updateAudioPosition(): void;
     getVolume(): number;  
-    getPrimary(): boolean;  
-    setPrimary(value: boolean): void;  
     
     /**
      * Starts or resumes playing an audio file.
