@@ -311,8 +311,8 @@ Media.prototype.release = function() {
  */
 Media.prototype.setVolume = function(volume) {
     var me = this;
+    console.log("volume set to", volume, "original", me._volume);
     me._volume = volume;
-    console.log("volume set to", volume);
     exec(null, null, "Media", "setVolume", [this.id, volume]);
 };
 Media.prototype.getVolume = function() {
@@ -351,7 +351,7 @@ Media.prototype.autoUpdatePosition = function() {
     var me = this;
     if (me._mediaState == Media.MEDIA_RUNNING) {
     	me.updatePosition();
-        setTimeout(()=> me.autoUpdatePosition(), 166);
+        setTimeout(()=> me.autoUpdatePosition(), 150);
         me.checkFadeZone();
     } else {
 
@@ -360,7 +360,9 @@ Media.prototype.autoUpdatePosition = function() {
 
 Media.prototype.doFadeOut = function() {
     var me = this;
-    if (me._position >= me._endPosition) {
+    //200ms because never reaches zero
+    if (me._endPosition - me._position < 0.2 || me._remaining < 0.2) {
+        console.log("Fadingout achieved end!", me._endPosition - me._position, me.getState());
         return me.stop();
     }
     const x = (me._endPosition - me._position) / me._fadeTime;
@@ -377,12 +379,12 @@ Media.prototype.checkFadeZone = function() {
     var me = this;
 
     const forcedFade = me._forceFadeOut;
-	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me._remaining <= me._fadeTime;
     const fadeInZone = me._fadeIn && me._position < me._fadeTime;
+	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me._remaining <= me._fadeTime;
 
     if (fadeOutZon && me._fadingOut === false) {
         me._fadingOut = true;
-        me._endPosition = me._position + me._fadeTime;
+        me._endPosition = Math.min(me._position + me._fadeTime, me._duration);
         me.statusCallback(Media.MEDIA_FADING_OUT);
         console.log(me._mediaId, "enabling fading Out, starting ", me._position, " ending ", me._endPosition);
     }
@@ -405,12 +407,16 @@ Media.onStatus = function(id, msgType, value) {
     if (media) {
         switch (msgType) {
             case Media.MEDIA_STATE:
-                media._mediaState = value;
-                media._playing = value == Media.MEDIA_RUNNING;
+                //for non-started media, prevent return mediaEnded and MediaStopped
+                if (media._mediaState == Media.MEDIA_NONE && value == Media.MEDIA_ENDED) return;
+                if (media._mediaState == Media.MEDIA_NONE && value == Media.MEDIA_STOPPED) return;
+                
                 media._loading = value == Media.MEDIA_STARTING;
-                media._stopped = value == Media.MEDIA_STOPPED;
+                media._playing = value == Media.MEDIA_RUNNING;
                 media._paused = value == Media.MEDIA_PAUSED;
-				media._ended = value == Media.MEDIA_ENDED;
+                media._stopped = value == Media.MEDIA_STOPPED;
+                media._ended = value == Media.MEDIA_ENDED;
+                media._mediaState = value;
 
                 if (media.statusCallback) {
                     media.statusCallback(value);
