@@ -176,14 +176,7 @@ exports.defineAutoTests = function () {
             expect(typeof media1.setVolume).toBe('function');
             media1.release();
         });
-
-        it("media.spec.15 should contain a getCurrentAmplitude function", function () {
-            var media1 = new Media("dummy");
-            expect(media1.getCurrentAmplitude).toBeDefined();
-            expect(typeof media1.getCurrentAmplitude).toBe('function');
-            media1.release();
-        });
-
+        
         it("media.spec.16 should contain a pauseRecord function", function () {
             var media1 = new Media("dummy");
             expect(media1.pauseRecord).toBeDefined();
@@ -738,103 +731,6 @@ exports.defineManualTests = function (contentEl, createActionButton) {
         });
     }
 
-    //-------------------------------------------------------------------------
-    // Audio recorder
-    //-------------------------------------------------------------------------
-    var mediaRec = null;
-    var recTime = 0;
-    var recordSrc = "myRecording.mp3";
-
-    //Record audio
-    function recordAudio() {
-        console.log("recordAudio(), recording to " + recordSrc);
-        console.log(" -- media=" + mediaRec);
-
-        releaseAudio();
-
-        if (!mediaRec) {
-            mediaRec = new Media(recordSrc,
-                function () {
-                    console.log("recordAudio():Audio Success");
-                },
-                    function (err) {
-                    console.log("recordAudio():Audio Error: " + err.code);
-                    setAudioStatus("Error: " + err.code);
-                },
-                    function (status) {
-                    console.log("recordAudio():Audio Status: " + status);
-                    setAudioStatus(Media.MEDIA_MSG[status]);
-                });
-        }
-
-        // Record audio
-        mediaRec.startRecord();
-
-        // Stop recording after 10 sec
-        recTime = 0;
-        var recInterval = setInterval(function () {
-                recTime = recTime + 1;
-                setAudioPosition(recTime + " sec");
-                if (recTime >= 10) {
-                    clearInterval(recInterval);
-                    if (mediaRec.stopAudioRecord) {
-                        mediaRec.stopAudioRecord();
-                    } else {
-                        mediaRec.stopRecord();
-                    }
-                    console.log("recordAudio(): stop");
-                }
-            }, 1000);
-    }
-
-    //Play back recorded audio
-    function playRecording() {
-        playAudio(recordSrc);
-    }
-
-    //Function to get a filename for iOS recording
-    //Ensures that file doesn't exist to test CB-11380
-    function getRecordSrc() {
-        var noop = function () {};
-        recordSrc = "cdvfile://localhost/temporary/iOSRecording.wav";
-        window.resolveLocalFileSystemURL(recordSrc, function (file) {
-            file.remove(function() {
-                console.log("Successfully removed " + recordSrc);
-            }, noop);
-        }, noop);
-    }
-
-    //Function to create a file for BB recording
-    function getRecordSrcBB() {
-        var fsFail = function (error) {
-            console.log("error creating file for BB recording");
-        };
-        var gotFile = function (file) {
-            recordSrc = file.fullPath;
-        };
-        var gotFS = function (fileSystem) {
-            fileSystem.root.getFile("BBRecording.amr", {
-                create : true
-            }, gotFile, fsFail);
-        };
-        window.requestFileSystem(LocalFileSystem.TEMPORARY, 0, gotFS, fsFail);
-    }
-
-    //Function to create a file for Windows recording
-    function getRecordSrcWin() {
-        var fsFail = function (error) {
-            console.log("error creating file for Win recording");
-        };
-        var gotFile = function (file) {
-            recordSrc = file.name;
-        };
-        var gotFS = function (fileSystem) {
-            fileSystem.root.getFile("WinRecording.m4a", {
-                create: true
-            }, gotFile, fsFail);
-        };
-        window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, gotFS, fsFail);
-    }
 
 //Generate Dynamic Table
     function generateTable(tableId, rows, cells, elements) {

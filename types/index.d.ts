@@ -24,21 +24,13 @@ export declare var Media: {
         MEDIA_MSG: string[];
 };
 /**
- * This plugin provides the ability to record and play back audio files on a device.
+ * This plugin provides the ability to play back audio files on a device.
  * NOTE: The current implementation does not adhere to a W3C specification for media capture,
  * and is provided for convenience only. A future implementation will adhere to the latest
  * W3C specification and may deprecate the current APIs.
  */
 export interface Media {
     updateInterval: number;
-    /**
-     * Returns the current amplitude within an audio file.
-     * @param mediaSuccess The callback that is passed the current amplitude (0.0 - 1.0).
-     * @param mediaError   The callback to execute if an error occurs.
-     */
-    getCurrentAmplitude(
-        mediaSuccess: (amplitude: number) => void,
-        mediaError?: (error: MediaError) => void): void;
     /**
      * Returns the current position within an audio file. Also updates the Media object's position parameter.
      * @param mediaSuccess The callback that is passed the current position in seconds.
@@ -52,19 +44,14 @@ export interface Media {
     getPosition(): number;
     getMediaState(): number;
     getState(): string;
-    get(id: string): any;
     getByMediaId(id: string): any;
-    list(): any;
+    list(): Media[];
     running(): any;
-
     getPaused(): boolean;
     getPlaying(): boolean;
     getEnded(): boolean;
     getLoading(): boolean;
     getStopped(): boolean; 
-    /**
-     * New get-sets implemented
-     */
     getFadeIn(): boolean;
     getFadeOut(): boolean;
     getFadingOut(): boolean;
@@ -108,23 +95,8 @@ export interface Media {
      * @param volume The volume to set for playback. The value must be within the range of 0.0 to 1.0.
      */
     setVolume(volume: number): void;
-    /** Starts recording an audio file. */
-    startRecord(): void;
-    /** Stops recording an audio file. */
-    stopRecord(): void;
-    /** Stops playing an audio file. */
-    stop(): void;
     
-    // id(): any;
-    // src(): string;
-    /**
-     * The position within the audio playback, in seconds.
-     * Not automatically updated during play; call getCurrentPosition to update.
-     */
-    position: number;
-    /** The duration of the media, in seconds. */
-    duration: number;
-    mediaState: number;
+    stop(): void;
     id: any;
     src: string;
 }
