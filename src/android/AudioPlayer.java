@@ -18,7 +18,6 @@
 */
 package org.apache.cordova.media;
 
-import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
@@ -66,7 +65,11 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private STATE state = STATE.MEDIA_NONE; // State of recording or playback
     private String audioFile = null;        // File name to play or record to
     private float duration = -1;            // Duration of audio
+
     private MediaPlayer player = null;      // Audio player object
+    private boolean prepareOnly = true;     // playback after file prepare flag
+    private int seekOnPrepared = 0;     // seek to this location once media is prepared
+
 
     /**
      * Constructor.
@@ -91,22 +94,27 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
 
     public void startPlaying(String file) {
-        if (this.player == null) return;
-        if (!this.readyPlayer(file)) return;
-
-        this.player.seekTo(0);
-        this.player.start();
-        this.setState(STATE.MEDIA_RUNNING);
+        if (this.player != null && this.readyPlayer(file)) {
+            this.player.start();
+            this.setState(STATE.MEDIA_RUNNING);
+            this.seekOnPrepared = 0; //insures this is always reset
+        } else {
+            this.prepareOnly = false;
+        }
     }
 
     public void seekToPlaying(int milliseconds) {
-        if (!this.readyPlayer(this.audioFile)) return;
+        if (this.readyPlayer(this.audioFile)) {
+            if (milliseconds > 0) {
+                this.player.seekTo(milliseconds);
+            }
 
-        if (milliseconds == 0) return;
-        this.player.seekTo(milliseconds);
-        this.player.start();
-        LOG.d(LOG_TAG, "Send a onStatus update for the new seek");
-        sendStatusChange(MEDIA_POSITION, null, (milliseconds / 1000.0f));
+            LOG.d(LOG_TAG, "Send a onStatus update for the new seek");
+            sendStatusChange(MEDIA_POSITION, null, (milliseconds / 1000.0f));
+        }
+        else {
+            this.seekOnPrepared = milliseconds;
+        }
     }
 
     public void pausePlaying() {
@@ -120,7 +128,6 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
             this.player.pause();
             this.player.seekTo(0);
             this.setState(STATE.MEDIA_STOPPED);
-            LOG.d(LOG_TAG, "stopPlaying is calling stopped");
         }
     }
     public void resumePlaying() {
@@ -128,11 +135,11 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
     public void onCompletion(MediaPlayer player) {
         this.setState(STATE.MEDIA_ENDED);
-        LOG.d(LOG_TAG, "on completion is calling stopped");
+        LOG.d(LOG_TAG, "media completed and ended");
     }
 
-    public long getCurrentPosition() { //position in msec or -1 if not playing
-        switch (this.state) {
+    public long getCurrentPosition() {
+        switch (this.state){
             case MEDIA_STARTING:
             case MEDIA_ENDED:
             case MEDIA_STOPPED:
@@ -153,81 +160,123 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
     public float getDuration(String file) {
         if (this.player == null) {
+            this.prepareOnly = true;
             this.startPlaying(file);
         }
         return this.duration;
+    }
+
+    public void onPrepared(MediaPlayer player) {
+        this.player.setOnCompletionListener(this);
+        this.seekToPlaying(this.seekOnPrepared);
+
+        if (!this.prepareOnly) {
+            this.player.start();
+            this.setState(STATE.MEDIA_RUNNING);
+            this.seekOnPrepared = 0; //reset only when played
+        } else {
+            this.setState(STATE.MEDIA_STARTING);
+        }
+        this.duration = getDurationInSeconds();
+        this.prepareOnly = true;
+
+        sendStatusChange(MEDIA_DURATION, null, this.duration);
     }
 
     private float getDurationInSeconds() {
         return (this.player.getDuration() / 1000.0f);
     }
 
+    /**
+     * Callback to be invoked when there has been an error during an asynchronous operation
+     *  (other errors will throw exceptions at method call time).
+     *
+     * @param player           the MediaPlayer the error pertains to
+     * @param arg1              the type of error that has occurred: (MEDIA_ERROR_UNKNOWN, MEDIA_ERROR_SERVER_DIED)
+     * @param arg2              an extra code, specific to the error.
+     */
+    public boolean onError(MediaPlayer player, int arg1, int arg2) {
+        LOG.d(LOG_TAG, "AudioPlayer.onError(" + arg1 + ", " + arg2 + ")");
+        this.state = STATE.MEDIA_STOPPED;
+        this.destroy();
+        sendErrorStatus(arg1);
+        return false;
+    }
+
     private void setState(STATE state) {
-        if (this.state != state) sendStatusChange(MEDIA_STATE, null, (float)state.ordinal());
+        if (this.state != state) {
+            sendStatusChange(MEDIA_STATE, null, (float)state.ordinal());
+        }
         this.state = state;
     }
+
     public int getState() {
         return this.state.ordinal();
     }
 
     public void setVolume(float volume) {
-        if (this.player == null) return;
-        this.player.setVolume(volume, volume);
+        if (this.player != null) {
+            this.player.setVolume(volume, volume);
+        }
     }
 
     private boolean readyPlayer(String file) {
         switch (this.state) {
+            case MEDIA_LOADING:
+                LOG.d(LOG_TAG, "AudioPlayer Loading: startPlaying() called during media preparation: " + STATE.MEDIA_STARTING.ordinal());
+                this.prepareOnly = false;
+                return false;
+
+            case MEDIA_STARTING:
             case MEDIA_RUNNING:
             case MEDIA_PAUSED:
                 return true;
-            case MEDIA_STARTING:
-            case MEDIA_LOADING:
-                return false;
+
             case MEDIA_NONE:
-                createPlayerAndLoad(file);
-                return false;
+                if (this.player == null) {
+                    this.player = new MediaPlayer();
+                    this.player.setOnErrorListener(this);
+                }
+                return this.loadAudio((file));
+
             case MEDIA_STOPPED:
                 if (player != null && file != null && this.audioFile.compareTo(file) == 0) {
                     player.seekTo(0);
                     player.pause();
                     return true;
-                } else {
-                    createPlayerAndLoad(file);
                 }
-            return false;
+                if (player == null) {
+                    this.player = new MediaPlayer();
+                    this.player.setOnErrorListener(this);
+                    if (file!=null && this.audioFile.compareTo(file) == 0) this.prepareOnly = false;
+                }
+                this.player.reset();
+                return this.loadAudio((file));
+
         }
         return false;
     }
-    public void createPlayerAndLoad(String file) {
-        if (this.player == null) {
-            LOG.d(LOG_TAG, "No player - creating one and setting to waitToPlay");
-            this.player = new MediaPlayer();
-            this.player.setOnErrorListener(this);
-        }
+
+    private boolean loadAudio(String file) {
         try {
-            if (this.isStreaming(file)) this.loadStreamingAudioFile(file);
-            else thisLocalAudioFile(file);
+            if (this.isStreaming(file)) {
+                loadAudioFile((file));
+            } else {
+                loadLocalAudioFile(file);
+            }
         } catch (Exception e) {
             sendErrorStatus(MEDIA_ERR_ABORTED);
         }
+        return false;
     }
-    private void loadStreamingAudioFile(String file) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
+
+    private void loadAudioFile(String file) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
         this.player.setDataSource(file);
-        this.player.prepareAsync();
         this.setState(STATE.MEDIA_STARTING);
         this.player.setOnPreparedListener(this);
-        LOG.d(LOG_TAG, "Media Set to Starting, and wait OnPrepared Listener", file);
+        this.player.prepareAsync();
     }
-    @Override
-    public void onPrepared(MediaPlayer player) {
-        this.player.seekTo(0);
-        this.player.start();
-        this.player.setOnCompletionListener(this);// Listen for playback completion
-        this.setState(STATE.MEDIA_RUNNING);
-        this.duration = getDurationInSeconds();// Save off duration
-        sendStatusChange(MEDIA_DURATION, null, this.duration);
-    }
-    private void thisLocalAudioFile(String file) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
+    private void loadLocalAudioFile(String file) throws IllegalArgumentException, SecurityException, IllegalStateException, IOException {
         if (file.startsWith("/android_asset/")) {
             String f = file.substring(15);
             android.content.res.AssetFileDescriptor fd = this.handler.cordova.getActivity().getAssets().openFd(f);
@@ -277,25 +326,4 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
         this.handler.sendEventMessage("status", statusDetails);
     }
-    /**
-     * Callback to be invoked when there has been an error during an asynchronous operation
-     *  (other errors will throw exceptions at method call time).
-     *
-     * @param player           the MediaPlayer the error pertains to
-     * @param arg1              the type of error that has occurred: (MEDIA_ERROR_UNKNOWN, MEDIA_ERROR_SERVER_DIED)
-     * @param arg2              an extra code, specific to the error.
-     */
-    public boolean onError(MediaPlayer player, int arg1, int arg2) {
-        LOG.d(LOG_TAG, "AudioPlayer.onError(" + arg1 + ", " + arg2 + ")");
-
-        // we don't want to send success callback
-        // so we don't call setState() here
-        this.state = STATE.MEDIA_STOPPED;
-        this.destroy();
-        // Send error notification to JavaScript
-        sendErrorStatus(arg1);
-
-        return false;
-    }
-
 }
