@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-
 /**
  * This class implements the audio playback and recording capabilities used by Cordova.
  * It is called by the AudioHandler Cordova class.
@@ -52,11 +51,13 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         MEDIA_LOADING,
         MEDIA_ENDED
     };
+
     private static final String LOG_TAG = "AudioPlayer";
     private static int MEDIA_STATE = 1;
     private static int MEDIA_DURATION = 2;
     private static int MEDIA_POSITION = 3;
     private static int MEDIA_ERROR = 9;
+
     private static int MEDIA_ERR_NONE_ACTIVE    = 0;
     private static int MEDIA_ERR_ABORTED        = 1;
 
@@ -94,7 +95,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
 
     public void startPlaying(String file) {
-        if (this.player != null && this.readyPlayer(file)) {
+        if (this.readyPlayer(file) && this.player != null) {
             this.player.start();
             this.setState(STATE.MEDIA_RUNNING);
             this.seekOnPrepared = 0; //insures this is always reset
@@ -102,7 +103,6 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
             this.prepareOnly = false;
         }
     }
-
     public void seekToPlaying(int milliseconds) {
         if (this.readyPlayer(this.audioFile)) {
             if (milliseconds > 0) {
@@ -116,13 +116,13 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
             this.seekOnPrepared = milliseconds;
         }
     }
-
     public void pausePlaying() {
         if (this.state == STATE.MEDIA_RUNNING && this.player != null) {
             this.player.pause();
             this.setState(STATE.MEDIA_PAUSED);
         }
     }
+
     public void stopPlaying() {
         if ((this.state == STATE.MEDIA_RUNNING) || (this.state == STATE.MEDIA_PAUSED)) {
             this.player.pause();
@@ -137,15 +137,11 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.setState(STATE.MEDIA_ENDED);
         LOG.d(LOG_TAG, "media completed and ended");
     }
-
     public long getCurrentPosition() {
         switch (this.state){
-            case MEDIA_STARTING:
-            case MEDIA_ENDED:
-            case MEDIA_STOPPED:
-                return 0;
             case MEDIA_RUNNING:
             case MEDIA_PAUSED:
+            case MEDIA_STARTING:
                 int curPos = this.player.getCurrentPosition();
                 sendStatusChange(MEDIA_POSITION, null, (curPos / 1000.0f));
                 return curPos;
@@ -240,7 +236,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                 return this.loadAudio((file));
 
             case MEDIA_STOPPED:
-                if (player != null && file != null && this.audioFile.compareTo(file) == 0) {
+                if (player != null && file!=null && this.audioFile.compareTo(file) == 0) {
                     player.seekTo(0);
                     player.pause();
                     return true;
