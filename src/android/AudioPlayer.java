@@ -1,21 +1,3 @@
-/*
-       Licensed to the Apache Software Foundation (ASF) under one
-       or more contributor license agreements.  See the NOTICE file
-       distributed with this work for additional information
-       regarding copyright ownership.  The ASF licenses this file
-       to you under the Apache License, Version 2.0 (the
-       "License"); you may not use this file except in compliance
-       with the License.  You may obtain a copy of the License at
-
-         http://www.apache.org/licenses/LICENSE-2.0
-
-       Unless required by applicable law or agreed to in writing,
-       software distributed under the License is distributed on an
-       "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-       KIND, either express or implied.  See the License for the
-       specific language governing permissions and limitations
-       under the License.
-*/
 package org.apache.cordova.media;
 
 import android.media.MediaPlayer;
@@ -33,15 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-/**
- * This class implements the audio playback and recording capabilities used by Cordova.
- * It is called by the AudioHandler Cordova class.
- * Only one file can be played or recorded per class instance.
- *
- * Local audio files must reside in one of two places:
- *      android_asset:      file name must start with /android_asset/sound.mp3
- *      sdcard:             file name is just sound.mp3
- */
+
 public class AudioPlayer implements OnCompletionListener, OnPreparedListener, OnErrorListener {
     public enum STATE { MEDIA_NONE,
         MEDIA_STARTING,
@@ -68,8 +42,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     private float duration = -1;            // Duration of audio
 
     private MediaPlayer player = null;      // Audio player object
-    private boolean prepareOnly = true;     // playback after file prepare flag
-    private int seekOnPrepared = 0;     // seek to this location once media is prepared
+    private boolean waitToPlay = true;     // playback after file prepare flag
 
 
     /**
@@ -82,6 +55,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.handler = handler;
         this.id = id;
         this.audioFile = file;
+        LOG.d(LOG_TAG, "constructor called" + this.audioFile);
     }
 
     public void destroy() {
@@ -98,22 +72,22 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         if (this.readyPlayer(file) && this.player != null) {
             this.player.start();
             this.setState(STATE.MEDIA_RUNNING);
-            this.seekOnPrepared = 0; //insures this is always reset
-        } else {
-            this.prepareOnly = false;
+            LOG.d(LOG_TAG, "start playing and ready RUNNING" + this.audioFile + ' ' +  this.state.name());
+        }
+        else {
+            this.waitToPlay = false;
+            LOG.d(LOG_TAG, "start - not ready" + ' ' + this.audioFile + ' ' + this.state.name());
         }
     }
     public void seekToPlaying(int milliseconds) {
-        if (this.readyPlayer(this.audioFile)) {
-            if (milliseconds > 0) {
-                this.player.seekTo(milliseconds);
-            }
+        LOG.d(LOG_TAG, "Send a onStatus update for the new seek " + this.audioFile);
 
-            LOG.d(LOG_TAG, "Send a onStatus update for the new seek");
-            sendStatusChange(MEDIA_POSITION, null, (milliseconds / 1000.0f));
-        }
-        else {
-            this.seekOnPrepared = milliseconds;
+        if (this.readyPlayer(this.audioFile)) {
+            //if (milliseconds > 0) {
+            //    this.player.seekTo(milliseconds);
+            //}
+            this.player.seekTo(milliseconds);
+            sendStatusChange(MEDIA_POSITION, (milliseconds / 1000.0f));
         }
     }
     public void pausePlaying() {
@@ -134,53 +108,46 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.startPlaying(this.audioFile);
     }
     public void onCompletion(MediaPlayer player) {
+        LOG.d(LOG_TAG, "media completed and ended" + ' ' + this.audioFile);
         this.setState(STATE.MEDIA_ENDED);
-        LOG.d(LOG_TAG, "media completed and ended");
     }
     public long getCurrentPosition() {
-        switch (this.state){
-            case MEDIA_RUNNING:
-            case MEDIA_PAUSED:
-            case MEDIA_STARTING:
-                int curPos = this.player.getCurrentPosition();
-                sendStatusChange(MEDIA_POSITION, null, (curPos / 1000.0f));
-                return curPos;
-            default:
-                return -1;
+        try{
+            int curPos = this.player.getCurrentPosition();
+            sendStatusChange(MEDIA_POSITION, (curPos / 1000.0f));
+            return curPos;
         }
-    }
-
-    public boolean isStreaming(String file) {
-        return file.contains("http://") || file.contains("https://") || file.contains("rtsp://");
+        catch (Exception e) {
+            return -1;
+        }
     }
 
     public float getDuration(String file) {
         if (this.player == null) {
-            this.prepareOnly = true;
+            this.waitToPlay = true;
             this.startPlaying(file);
+            return 0;
         }
+        LOG.d(LOG_TAG, "get duration method" + ' ' + this.audioFile);
         return this.duration;
     }
 
     public void onPrepared(MediaPlayer player) {
-        this.player.setOnCompletionListener(this);
-        this.seekToPlaying(this.seekOnPrepared);
+        LOG.d(LOG_TAG, "media is now Prepared! " + this.audioFile + ' ' + this.state);
 
-        if (!this.prepareOnly) {
-            this.player.start();
+        this.player.setOnCompletionListener(this);
+
+        if (!this.waitToPlay) {
             this.setState(STATE.MEDIA_RUNNING);
-            this.seekOnPrepared = 0; //reset only when played
-        } else {
+            this.player.start();
+        }
+        if (this.waitToPlay) {
             this.setState(STATE.MEDIA_STARTING);
         }
-        this.duration = getDurationInSeconds();
-        this.prepareOnly = true;
+        this.duration = this.player.getDuration() / 1000.0f;
+        this.waitToPlay = true;
 
-        sendStatusChange(MEDIA_DURATION, null, this.duration);
-    }
-
-    private float getDurationInSeconds() {
-        return (this.player.getDuration() / 1000.0f);
+        sendStatusChange(MEDIA_DURATION, this.player.getDuration() / 1000.0f);
     }
 
     /**
@@ -201,7 +168,8 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
     private void setState(STATE state) {
         if (this.state != state) {
-            sendStatusChange(MEDIA_STATE, null, (float)state.ordinal());
+            LOG.d(LOG_TAG, "Android - media State changed from " + this.state + " to " + state + this.player.getCurrentPosition());
+            sendStatusChange(MEDIA_STATE, (float)state.ordinal());
         }
         this.state = state;
     }
@@ -217,10 +185,12 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
 
     private boolean readyPlayer(String file) {
+        LOG.d(LOG_TAG, "readyPlayer called | status:" + this.state + file);
+
         switch (this.state) {
             case MEDIA_LOADING:
                 LOG.d(LOG_TAG, "AudioPlayer Loading: startPlaying() called during media preparation: " + STATE.MEDIA_STARTING.ordinal());
-                this.prepareOnly = false;
+                this.waitToPlay = false;
                 return false;
 
             case MEDIA_STARTING:
@@ -244,9 +214,10 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
                 if (player == null) {
                     this.player = new MediaPlayer();
                     this.player.setOnErrorListener(this);
-                    if (file!=null && this.audioFile.compareTo(file) == 0) this.prepareOnly = false;
+                    if (file!=null && this.audioFile.compareTo(file) == 0)  {
+                        this.waitToPlay = false;
+                    }
                 }
-                this.player.reset();
                 return this.loadAudio((file));
 
         }
@@ -255,7 +226,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
     private boolean loadAudio(String file) {
         try {
-            if (this.isStreaming(file)) {
+            if (file.contains("http://") || file.contains("https://") || file.contains("rtsp://")) {
                 loadAudioFile((file));
             } else {
                 loadLocalAudioFile(file);
@@ -292,30 +263,18 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.setState(STATE.MEDIA_STARTING);
         this.player.setOnPreparedListener(this);
         this.player.prepare();
-        this.duration = getDurationInSeconds();
+        this.duration = this.player.getDuration() / 1000.0f;
     }
 
     private void sendErrorStatus(int errorCode) {
-        sendStatusChange(MEDIA_ERROR, errorCode, null);
+        sendStatusChange(MEDIA_ERROR, (float)errorCode);
     }
-
-    private void sendStatusChange(int messageType, Integer additionalCode, Float value) {
-        if (additionalCode != null && value != null) {
-            throw new IllegalArgumentException("Only one of additionalCode or value can be specified, not both");
-        }
-
+    private void sendStatusChange(int messageType, Float value) {
         JSONObject statusDetails = new JSONObject();
         try {
             statusDetails.put("id", this.id);
             statusDetails.put("msgType", messageType);
-            if (additionalCode != null) {
-                JSONObject code = new JSONObject();
-                code.put("code", additionalCode.intValue());
-                statusDetails.put("value", code);
-            }
-            else if (value != null) {
-                statusDetails.put("value", value.floatValue());
-            }
+            statusDetails.put("value", value.floatValue());
         } catch (JSONException e) {
             LOG.e(LOG_TAG, "Failed to create status details", e);
         }
