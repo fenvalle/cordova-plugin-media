@@ -309,7 +309,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             bError = [self prepareToPlay:audioFile withId:mediaId];
         }
         if (!bError) {
-            //self.currMediaId = audioFile.player.mediaId;
+            [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_STARTING)];
             self.currMediaId = mediaId;
 
             // audioFile.player != nil  or player was successfully created

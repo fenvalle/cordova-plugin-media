@@ -62,7 +62,6 @@ typedef NSUInteger CDVMediaMsg;
     CDVAudioPlayer* player;
     NSNumber* volume;
     NSNumber* rate;
-    AVPlayer* avPlayerInstance;
 }
 
 @property (nonatomic, strong) NSString* resourcePath;
