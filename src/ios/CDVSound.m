@@ -311,7 +311,6 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         if (!bError) {
             [self onStatus:MEDIA_STATE mediaId:mediaId param:@(MEDIA_STARTING)];
             self.currMediaId = mediaId;
-
             // audioFile.player != nil  or player was successfully created
             // get the audioSession and set the category to allow Playing when device is locked or ring/silent switch engaged
             if ([self hasAudioSession]) {
