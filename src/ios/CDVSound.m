@@ -193,7 +193,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
 
 - (void)create:(CDVInvokedUrlCommand*)command
 {
-    [self.commandDelegate runInBackground:^{
+    
         NSString* mediaId = [command argumentAtIndex:0];
         NSString* resourcePath = [command argumentAtIndex:1];
 
@@ -220,11 +220,11 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                 //the avPlayer will not be replaced anymore, instead a new instance will be created always
                 audioFile.avPlayerInstance = [[AVPlayer alloc] initWithPlayerItem:playerItem];
 
-                // Avoid excessive buffering so streaming media can play instantly on iOS
-                // Removes preplay delay on ios 10+, makes consistent with ios9 behaviour
-                if ([NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){10,0,0}]) {
-                    audioFile.avPlayerInstance.automaticallyWaitsToMinimizeStalling = NO;
-                }
+                // // Avoid excessive buffering so streaming media can play instantly on iOS
+                // // Removes preplay delay on ios 10+, makes consistent with ios9 behaviour
+                 if ([NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){10,0,0}]) {
+                     audioFile.avPlayerInstance.automaticallyWaitsToMinimizeStalling = NO;
+                 }
             }
 
             self.currMediaId = mediaId;
@@ -232,7 +232,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             CDVPluginResult* result = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
             [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
         }
-    }];
+    
 }
 
 - (void)setVolume:(CDVInvokedUrlCommand*)command
@@ -263,7 +263,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             }
         }
 
-    }];
+   }];
 }
 
 - (void)setRate:(CDVInvokedUrlCommand*)command
