@@ -16,7 +16,6 @@
  */
 
 #import "CDVSound.h"
-#import "CDVFile.h"
 #import <AVFoundation/AVFoundation.h>
 #include <math.h>
 
@@ -62,13 +61,6 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         NSString* docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
         filePath = [resourcePath stringByReplacingOccurrencesOfString:DOCUMENTS_SCHEME_PREFIX withString:[NSString stringWithFormat:@"%@/", docsPath]];
         NSLog(@"Will use resource '%@' from the documents folder with path = %@", resourcePath, filePath);
-    } else if ([resourcePath hasPrefix:CDVFILE_PREFIX]) {
-        CDVFile *filePlugin = [self.commandDelegate getCommandInstance:@"File"];
-        CDVFilesystemURL *url = [CDVFilesystemURL fileSystemURLWithString:resourcePath];
-        filePath = [filePlugin filesystemPathForURL:url];
-        if (filePath == nil) {
-            resourceURL = [NSURL URLWithString:resourcePath];
-        }
     } else {
         // attempt to find file path in www directory or LocalFileSystem.TEMPORARY directory
         filePath = [self.commandDelegate pathForResource:resourcePath];
