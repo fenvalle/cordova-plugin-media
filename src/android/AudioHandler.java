@@ -17,7 +17,7 @@
        under the License.
 */
 package org.apache.cordova.media;
-
+import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
@@ -114,38 +114,43 @@ public class AudioHandler extends CordovaPlugin {
         else if (action.equals("setVolume")) {
             String one = args.getString(0);
             String two = args.getString(1);
-            cordova.getThreadPool().execute(() -> {
-                try {
-                    setVolume(one, Float.parseFloat(two));
-                } catch (NumberFormatException nfe) { }
-            });
-        } else if (action.equals("getCurrentPositionAudio")) {
-            String one = args.getString(0);
-            cordova.getThreadPool().execute(() -> callbackContext.sendPluginResult(new PluginResult(status, getCurrentPositionAudio(one))));
-            return true;
+            Float volume = 1f;
+            try { volume = Float.parseFloat(two); } catch (Exception e) { }
+            Float finalVolume = volume;
+
+            cordova.getActivity().runOnUiThread(() -> this.setVolume(one, finalVolume));
         }
+
+        else if (action.equals("getCurrentPositionAudio")) {
+            String one = args.getString(0);
+            cordova.getActivity().runOnUiThread(() -> new PluginResult(status, getCurrentPositionAudio(one)));
+        }
+
         else if (action.equals("getDurationAudio")) {
             String one = args.getString(0);
             String two = args.getString(1);
 
-            cordova.getThreadPool().execute(() -> callbackContext.sendPluginResult(new PluginResult(status, getDurationAudio(one, two))));
-            return true;
+            new PluginResult(status, getDurationAudio(one, two));
         }
+
         else if (action.equals("create")) {
             String id = args.getString(0);
             String src = FileHelper.stripFileProtocol(args.getString(1));
             cordova.getThreadPool().execute(() -> getOrCreatePlayer(id, src));
         }
+
         else if (action.equals("release")) {
             boolean b = this.release(args.getString(0));
             callbackContext.sendPluginResult(new PluginResult(status, b));
             return true;
         }
+
         else if (action.equals("messageChannel")) {
             messageChannel = callbackContext;
             return true;
         }
         else return false;
+
         callbackContext.sendPluginResult(new PluginResult(status, result));
 
         return true;
@@ -295,7 +300,7 @@ public class AudioHandler extends CordovaPlugin {
         if (audio != null) {
             return (audio.getCurrentPosition() / 1000.0f);
         }
-        return -1;
+        return 0;
     }
 
     /**
@@ -307,27 +312,6 @@ public class AudioHandler extends CordovaPlugin {
     public float getDurationAudio(String id, String file) {
         AudioPlayer audio = getOrCreatePlayer(id, file);
         return audio.getDuration();
-    }
-
-    /**
-     * Set the audio device to be used for playback.
-     *
-     * @param output			1=earpiece, 2=speaker
-     */
-    @SuppressWarnings("deprecation")
-    public void setAudioOutputDevice(int output) {
-        String TAG1 = "AudioHandler.setAudioOutputDevice(): Error : ";
-
-        AudioManager audiMgr = (AudioManager) this.cordova.getActivity().getSystemService(Context.AUDIO_SERVICE);
-        if (output == 2) {
-            audiMgr.setRouting(AudioManager.MODE_NORMAL, AudioManager.ROUTE_SPEAKER, AudioManager.ROUTE_ALL);
-        }
-        else if (output == 1) {
-            audiMgr.setRouting(AudioManager.MODE_NORMAL, AudioManager.ROUTE_EARPIECE, AudioManager.ROUTE_ALL);
-        }
-        else {
-            LOG.e(TAG1," Unknown output device");
-        }
     }
 
     public void pauseAllLostFocus() {
@@ -380,41 +364,10 @@ public class AudioHandler extends CordovaPlugin {
 
     }
 
-
-    /**
-     * Get the audio device to be used for playback.
-     *
-     * @return					1=earpiece, 2=speaker
-     */
-    @SuppressWarnings("deprecation")
-    public int getAudioOutputDevice() {
-        AudioManager audiMgr = (AudioManager) this.cordova.getActivity().getSystemService(Context.AUDIO_SERVICE);
-        if (audiMgr.getRouting(AudioManager.MODE_NORMAL) == AudioManager.ROUTE_EARPIECE) {
-            return 1;
-        }
-        else if (audiMgr.getRouting(AudioManager.MODE_NORMAL) == AudioManager.ROUTE_SPEAKER) {
-            return 2;
-        }
-        else {
-            return -1;
-        }
-    }
-
-    /**
-     * Set the volume for an audio device
-     *
-     * @param id				The id of the audio player
-     * @param volume            Volume to adjust to 0.0f - 1.0f
-     */
     public void setVolume(String id, float volume) {
-        String TAG3 = "AudioHandler.setVolume(): Error : ";
-
         AudioPlayer audio = this.players.get(id);
-        if (audio != null) {
-            audio.setVolume(volume);
-        } else {
-            LOG.e(TAG3,"Unknown Audio Player " + id);
-        }
+        if (audio == null) return;
+        audio.setVolume(volume);
     }
 
     private void onFirstPlayerCreated() {

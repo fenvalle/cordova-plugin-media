@@ -312,7 +312,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
                 }
 
                 if (bPlayAudioWhenScreenIsLocked) {
-                    [self.avSession setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionMixWithOthers error:&err];
+                    [self.avSession setCategory:AVAudioSessionCategoryPlayback withOptions:AVAudioSessionCategoryOptionAllowBluetoothA2DP error:&err];
                 }
                 else {
                     [self.avSession setCategory:AVAudioSessionCategorySoloAmbient error:&err];
