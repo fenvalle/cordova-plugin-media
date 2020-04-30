@@ -52,8 +52,11 @@
 
         <config-file target="AndroidManifest.xml" parent="/*">
             <uses-permission android:name="android.permission.WAKE_LOCK" />
+            <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
         </config-file>
 
+        <framework src="com.android.support:support-v4:27.+" />
+        <framework src="com.android.support:support-media-compat:27.+" />
         <source-file src="src/android/AudioHandler.java" target-dir="src/org/apache/cordova/media" />
         <source-file src="src/android/AudioPlayer.java" target-dir="src/org/apache/cordova/media" />
         <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/media" />

@@ -48,9 +48,8 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this.errorCallback = errorCallback;
     this.statusCallback = statusCallback;
     this.positionCallback = positionCallback;
-    this._duration = -1;
-    this._position = -1;
-    this._remaining = -1;
+    this._duration = 0;
+    this._position = 0;
     exec(null, this.errorCallback, "Media", "create", [this.id, this.src]);
 
     this._mediaState = 0;
@@ -67,7 +66,6 @@ var Media = function(src, successCallback, errorCallback, statusCallback, positi
     this._forceFadeOut = false;
 	this._fadingOut = false;
     this._mediaId = '0';
-    this._mediaNumber = -1;
 };
 
 // Media messages
@@ -102,7 +100,7 @@ Media.list = function() {
 
 // "static" function to list existing objs.
 Media.running = function() {
-	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._mediaState == Media.MEDIA_RUNNING);
+	return Object.keys(Media.list()).map(key => Media.list()[key]).filter(x=> x._mediaState == Media.MEDIA_RUNNING || x._mediaState == Media.MEDIA_STARTING);
 };
 
 /**
@@ -163,7 +161,7 @@ Media.prototype.src = function() {
  * Get duration of an audio file.
  * The duration is only set for audio that is playing, paused or stopped.
  *
- * @return      duration or -1 if not known.
+ * @return      duration or 0 if not known.
  */
 Media.prototype.getDuration = function() {
     var me = this;
@@ -321,10 +319,15 @@ Media.prototype.autoUpdatePosition = function() {
     }
 };
 
+Media.prototype.getRemaining = function() {
+    var me = this;
+    return Math.max(me._duration - me._position, 0);
+};
+
 Media.prototype.doFadeOut = function() {
     var me = this;
     //200ms because never reaches zero
-    if (me._endPosition - me._position < 0.2 || me._remaining < 0.2) {
+    if (me._endPosition - me._position < 0.2 || me.getRemaining() < 0.2) {
         console.log("Fadingout achieved end!", me._endPosition - me._position, me.getState());
         return me.stop();
     }
@@ -343,7 +346,7 @@ Media.prototype.checkFadeZone = function() {
 
     const forcedFade = me._forceFadeOut;
     const fadeInZone = me._fadeIn && me._position < me._fadeTime;
-	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me._remaining <= me._fadeTime;
+	const fadeOutZon = me._fadeOut && me._position > me._fadeTime && me.getRemaining() <= me._fadeTime;
 
     if (fadeOutZon && me._fadingOut === false) {
         me._fadingOut = true;
@@ -400,9 +403,8 @@ Media.onStatus = function(id, msgType, value) {
 
             case Media.MEDIA_POSITION:
                 media._position = Number(value);
-                media._remaining = media._duration - media._position;                
 				if (media.positionCallback) {
-                    media.positionCallback(media._remaining);
+                    media.positionCallback(media.getRemaining());
                 }
                 break;
             default:
