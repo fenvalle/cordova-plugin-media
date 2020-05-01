@@ -5,7 +5,6 @@ import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
 import android.media.MediaPlayer.OnErrorListener;
 import android.media.MediaPlayer.OnPreparedListener;
-import android.media.MediaPlayer.OnSeekCompleteListener;
 import android.os.Environment;
 import android.os.PowerManager;
 
@@ -15,7 +14,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-public class AudioPlayer implements OnCompletionListener, OnPreparedListener, OnErrorListener, OnSeekCompleteListener {
+public class AudioPlayer implements OnCompletionListener, OnPreparedListener, OnErrorListener {
     public enum STATE {
         MEDIA_NONE,
         MEDIA_PREPARED,
@@ -48,6 +47,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.id = id;
         this.handler = handler;
         audioFile = file;
+        //LOG.d("1 VIGIL_PLAYER_CREATED", this.audioFile);
         player.setOnCompletionListener(this);
         player.setOnPreparedListener(this);
         player.setOnErrorListener(this);
@@ -56,6 +56,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
     //STEP 2 - LoadAudio File from web or locally, and Prepare Media
     private void loadAudio() {
+        //LOG.d("2 VIGIL_PLAYER_AUDIO LOADED", this.audioFile);
         try {
             if (this.audioFile.contains("http://") || this.audioFile.contains("https://") || this.audioFile.contains("rtsp://")) {
                 this.player.setDataSource(this.audioFile);
@@ -69,26 +70,29 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
     //Register for outside requests
     public void requestPlay() {
+        //LOG.d("VIGIL_PLAYER_PLAY_REQUESTED", this.audioFile);
         playRequested = true;
         this.setState(STATE.MEDIA_PREPARED);
         executePlay();
     }
     private void executePlay() {
+        //LOG.d("VIGIL_PLAYER_EXECPLAY", this.audioFile + " playRequested: " + playRequested+ " Prepared: " + prepared);
         if (!playRequested) return;
         if (!prepared) return;
 
         this.player.start();
         this.setState(STATE.MEDIA_RUNNING);
         playRequested = false; //once I play, I remove the play request
+        //LOG.d("VIGIL_PLAYER_RUNNING", this.audioFile);
     }
     ////////////BEGIN LISTENERS////////////
     //STEP 3 - When Song is Prepared it checks if can play and execPlay
     @Override
     public void onPrepared(MediaPlayer player) {
-        LOG.d("VIGIL_PLAYER_PREPARED", this.audioFile);
-        if (seekOnPrepared > 0) this.seekToPlaying(seekOnPrepared);
-        seekOnPrepared = 0;
         prepared = true;
+        //LOG.d("3 VIGIL_PLAYER_PREPARED SET TO TRUE", this.audioFile);
+        this.seekToPlaying(seekOnPrepared);
+        seekOnPrepared = 0;
         this.getDuration();
         this.executePlay();
     }
@@ -97,10 +101,8 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         this.setState(STATE.MEDIA_ENDED);
     }
     @Override
-    public void onSeekComplete(MediaPlayer mp) { LOG.d("VIGIL_PLAYER_SEEKCOMPLETE", this.audioFile); }
-    @Override
     public boolean onError(MediaPlayer player, int arg1, int arg2) {
-        LOG.d("VIGIL_PLAYER_ERROR", arg1 + ", " + arg2);
+        //LOG.d("VIGIL_PLAYER_ERROR", arg1 + ", " + arg2);
         sendStatusChange(MEDIA_ERROR, (float) arg1);
         return true; //so player not stops
     }
@@ -112,6 +114,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
 
     //STEP 3a - If there is a seek request, buffer it or do seek
     public void seekToPlaying(int milliseconds) {
+        //LOG.d("3A VIGIL_PLAYER_AUDIO SEEK TO PLAY", this.audioFile + String.valueOf(milliseconds));
         if (prepared) {
             this.player.seekTo(milliseconds);
             sendStatusChange(MEDIA_POSITION, (milliseconds / 1000.0f));
@@ -143,12 +146,13 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
         return 0;
     }
     public float getDuration() {
+        //LOG.d("VIGIL_PLAYER_DURATION REQUESTED", this.audioFile);
         if (!prepared) return 0f;
         try {
             float duration = (this.player.getDuration() / 1000.0f);
             sendStatusChange(MEDIA_DURATION, duration);
             return duration;
-        } catch (Exception e) { }
+        } catch (Exception e) {LOG.d("VIGIL_PLAYER_DURATION_ERROR", e.getMessage()); }
         return 0f;
     }
 
@@ -157,6 +161,7 @@ public class AudioPlayer implements OnCompletionListener, OnPreparedListener, On
     }
     private void setState(STATE state) {
         if (this.state == state) return;
+        //LOG.d("VIGIL_PLAYER_SETSTATE", this.audioFile + STATE.values()[MEDIA_STATE].toString());
         sendStatusChange(MEDIA_STATE, (float)state.ordinal());
         this.state = state;
     }

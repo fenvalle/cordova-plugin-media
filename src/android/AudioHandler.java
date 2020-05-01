@@ -74,53 +74,41 @@ public class AudioHandler extends CordovaPlugin {
             String one = args.getString(0);
             String target = args.getString(1);
 
-            cordova.getThreadPool().execute(new Runnable() {
-                @Override
-                public void run() {
-                    String fileUriStr;
-                    try { fileUriStr = resourceApi.remapUri(Uri.parse(target)).toString(); }
-                    catch (IllegalArgumentException e) { fileUriStr = target; }
+            String fileUriStr;
+            try { fileUriStr = resourceApi.remapUri(Uri.parse(target)).toString(); }
+            catch (IllegalArgumentException e) { fileUriStr = target; }
 
-                    startPlayingAudio(one, FileHelper.stripFileProtocol(fileUriStr));
-                }}
-            );
+            startPlayingAudio(one, FileHelper.stripFileProtocol(fileUriStr));
+            return true;
         }
 
         else if (action.equals("seekToAudio")) {
             String one = args.getString(0);
             Integer two = args.getInt(1);
-            cordova.getThreadPool().execute(new Runnable() {
-                @Override
-                public void run() {
-                    seekToAudio(one, two);
-                }}
-            );
+            seekToAudio(one, two);
+            return true;
         }
 
         else if (action.equals("setVolume")) {
             String one = args.getString(0);
             String two = args.getString(1);
 
-            cordova.getThreadPool().execute(new Runnable() {
-                @Override
-                public void run() {
-                    Float volume = 1f;
-                    try { volume = Float.parseFloat(two); } catch (Exception e) { }
-                    setVolume(one, volume);
-                }
+            cordova.getThreadPool().execute(() -> {
+                Float volume = 1f;
+                try { volume = Float.parseFloat(two); } catch (Exception e) { }
+                setVolume(one, volume);
             });
+            return true;
         }
 
         //actions with specified plugin result
         else if (action.equals("getCurrentPositionAudio")) {
             String one = args.getString(0);
-            cordova.getThreadPool().execute(new Runnable() {
-                @Override
-                public void run() {
-                    callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, getCurrentPositionAudio(one)));
-                }
+            cordova.getThreadPool().execute(() -> {
+                AudioPlayer audio = this.players.get(one);
+                if (audio == null) return;
+                callbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, audio.getCurrentPosition() / 1000.0f));
             });
-            return true;
         }
 
         else if (action.equals("getDurationAudio")) {
@@ -287,10 +275,8 @@ public class AudioHandler extends CordovaPlugin {
      */
     public float getCurrentPositionAudio(String id) {
         AudioPlayer audio = this.players.get(id);
-        if (audio != null) {
-            return (audio.getCurrentPosition() / 1000.0f);
-        }
-        return 0;
+        if (audio == null) return 0;
+        return (audio.getCurrentPosition() / 1000.0f);
     }
 
     /**
