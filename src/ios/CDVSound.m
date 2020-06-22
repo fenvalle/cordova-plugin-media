@@ -126,9 +126,9 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         resourceURL = [self urlForPlaying:resourcePath];
         }
         if ((resourceURL == nil) && !bSuppress) {
-            bError = YES;
-            errcode = MEDIA_ERR_ABORTED;
-            errMsg = [NSString stringWithFormat:@"Cannot use audio file from resource '%@'", resourcePath];
+            //bError = YES;
+            //errcode = MEDIA_ERR_ABORTED;
+            //errMsg = [NSString stringWithFormat:@"Cannot use audio file from resource '%@'", resourcePath];
         } else {
             audioFile.resourceURL = resourceURL;
         }
