@@ -118,7 +118,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
         } else {
             audioFile = [[CDVAudioFile alloc] init];
             audioFile.resourcePath = resourcePath;
-            audioFile.resourceURL = nil;  // validate resourceURL when actually play or record
+            audioFile.resourceURL = [self urlForPlaying:resourcePath];  // validate resourceURL when actually play or record
             [[self soundCache] setObject:audioFile forKey:mediaId];
         }
     }
@@ -135,8 +135,7 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     
 
     if (bError) {
-        [self onStatus:MEDIA_ERROR mediaId:mediaId param:
-            [self createMediaErrorWithCode:errcode message:errMsg]];
+        [self onStatus:MEDIA_ERROR mediaId:mediaId param:[self createMediaErrorWithCode:errcode message:errMsg]];
     }
 
     return audioFile;
@@ -408,16 +407,12 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
     if ([resourceURL isFileURL]) {
         audioFile.player = [[CDVAudioPlayer alloc] initWithContentsOfURL:resourceURL error:&playerError];
     } else {
-        /*
         NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:resourceURL];
         NSString* userAgent = [self.commandDelegate userAgent];
-        if (userAgent) {
-            [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
-        }
+        if (userAgent) [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
         NSURLResponse* __autoreleasing response = nil;
         NSData* data = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&playerError];
-        if (playerError) {
-            NSLog(@"Unable to download audio from: %@", [resourceURL absoluteString]);
+        if (playerError) { NSLog(@"Unable to download audio from: %@", [resourceURL absoluteString]);
         } else {
             // bug in AVAudioPlayer when playing downloaded data in NSData - we have to download the file and play from disk
             CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
@@ -429,7 +424,6 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             NSURL* fileURL = [NSURL fileURLWithPath:filePath];
             audioFile.player = [[CDVAudioPlayer alloc] initWithContentsOfURL:fileURL error:&playerError];
         }
-        */
     }
 
     if (playerError != nil) {
