@@ -326,6 +326,14 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
             if (!bError) {
                 NSLog(@"Playing audio sample '%@'", audioFile.resourcePath);
                 double duration = 0;
+
+                BOOL isSlowBufferTriggering = [NSProcessInfo.processInfo isOperatingSystemAtLeastVersion:(NSOperatingSystemVersion){10,0,0}];
+                BOOL enableBuffering = options != nil && [options objectForKey:@"automaticallyWaitsToMinimizeStalling"];
+                if (isSlowBufferTriggering) {
+                    NSLog(@"%s buffered playing (automaticallyWaitsToMinimizeStalling)", enableBuffering ? "Enable" : "Disable");
+                    avPlayer.automaticallyWaitsToMinimizeStalling = enableBuffering;
+                }
+
                 if (audioFile.avPlayerInstance.currentItem && audioFile.avPlayerInstance.currentItem.asset) {
                     CMTime time = audioFile.avPlayerInstance.currentItem.asset.duration;
                     duration = CMTimeGetSeconds(time);
@@ -406,24 +414,6 @@ BOOL keepAvAudioSessionAlwaysActive = NO;
 
     if ([resourceURL isFileURL]) {
         audioFile.player = [[CDVAudioPlayer alloc] initWithContentsOfURL:resourceURL error:&playerError];
-    } else {
-        NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:resourceURL];
-        NSString* userAgent = [self.commandDelegate userAgent];
-        if (userAgent) [request setValue:userAgent forHTTPHeaderField:@"User-Agent"];
-        NSURLResponse* __autoreleasing response = nil;
-        NSData* data = [NSURLConnection sendSynchronousRequest:request returningResponse:&response error:&playerError];
-        if (playerError) { NSLog(@"Unable to download audio from: %@", [resourceURL absoluteString]);
-        } else {
-            // bug in AVAudioPlayer when playing downloaded data in NSData - we have to download the file and play from disk
-            CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
-            CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
-            NSString* filePath = [NSString stringWithFormat:@"%@/%@", [NSTemporaryDirectory()stringByStandardizingPath], uuidString];
-            CFRelease(uuidString);
-            CFRelease(uuidRef);
-            [data writeToFile:filePath atomically:YES];
-            NSURL* fileURL = [NSURL fileURLWithPath:filePath];
-            audioFile.player = [[CDVAudioPlayer alloc] initWithContentsOfURL:fileURL error:&playerError];
-        }
     }
 
     if (playerError != nil) {
